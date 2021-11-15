@@ -96,7 +96,7 @@ func readInteger(startAt int, data []byte) (ele *Element, newStartAt int, err er
 	return
 }
 
-func readArrary(startAt int, data []byte) (ele *Element, newStartAt int, err error) {
+func readArray(startAt int, data []byte) (ele *Element, newStartAt int, err error) {
 	var (
 		ln int
 	)

@@ -34,6 +34,7 @@ func NewMessage(data []byte) (msg *Message, err error) {
 
 	msg = &Message{
 		OriginalData: data,
+		Elements:     make([]*Element, 0),
 	}
 
 	if err = msg.Decode(); err != nil {
@@ -82,7 +83,7 @@ func (m *Message) decodeSingle(startAt int) (n int, err error) {
 	case IntegersPrefix:
 		f = readInteger
 	case ArrarysPrefix:
-		f = readArrary
+		f = readArray
 	default:
 		return 0, fmt.Errorf("unsupport protocal")
 	}
