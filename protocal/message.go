@@ -40,7 +40,7 @@ func NewMessage(data []byte) (msg *Message, err error) {
 		return nil, fmt.Errorf("decode data fail. err: %w", err)
 	}
 
-	if err = validMessage(msg.Elements); err != nil {
+	if err = validArray(msg.Elements); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,57 @@ func (m *Message) Encode() error {
 }
 
 // todo check array value
-func validMessage(elements []*Element) error {
+func validArray(elements []*Element) error {
+	var checkFunc func(int, int) (int, error)
+
+	checkFunc = func(startAt, require int) (int, error) {
+		var (
+			i        = startAt
+			matchCnt int
+		)
+
+		for matchCnt < require && i < len(elements) {
+			if i >= len(elements) {
+				return -1, fmt.Errorf("invalid array")
+			}
+
+			if elements[i].Type == ElementTypeArray {
+				offset, err := checkFunc(i+1, elements[i].Len)
+				if err != nil {
+					return -1, err
+				}
+				i = offset
+			} else {
+				i++
+			}
+
+			matchCnt++
+		}
+
+		if matchCnt != require {
+			return -1, fmt.Errorf("array len and value not match")
+		}
+
+		return i, nil
+	}
+
+	if len(elements) < 2 {
+		return nil
+	}
+
+	if elements[0].Type != ElementTypeArray {
+		return nil
+	}
+
+	ln, err := checkFunc(1, elements[0].Len)
+	if err != nil {
+		return err
+	}
+
+	if ln != len(elements) {
+		return fmt.Errorf("want:%d, got:%d", ln, len(elements))
+	}
+
 	return nil
 }
 

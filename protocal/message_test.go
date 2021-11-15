@@ -153,7 +153,7 @@ func TestMessage_Encode(t *testing.T) {
 					{
 						Type:            ElementTypeArray,
 						Len:             4,
-						Value:           "2",
+						Value:           "4",
 						DescriptionType: ArrarysPrefix,
 					},
 					{
@@ -204,6 +204,80 @@ func TestMessage_Encode(t *testing.T) {
 
 			if !reflect.DeepEqual(m.OriginalData, tt.wantResult) {
 				t.Errorf("Want:%v, got:%v", tt.wantErr, m.OriginalData)
+			}
+		})
+	}
+}
+
+func Test_validArray(t *testing.T) {
+	type args struct {
+		elements []*Element
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{
+			name: "normal_test",
+			args: args{
+				elements: []*Element{
+					{
+						Type:            ElementTypeArray,
+						Len:             3,
+						Value:           "3",
+						DescriptionType: ArrarysPrefix,
+					},
+					{
+						Type:            ElementTypeArray,
+						Len:             2,
+						Value:           "2",
+						DescriptionType: ArrarysPrefix,
+					},
+					{
+						Type:            ElementTypeString,
+						Value:           "hello",
+						DescriptionType: SimpleStringsPrefix,
+					},
+					{
+						Type:            ElementTypeInt,
+						Value:           "12",
+						DescriptionType: IntegersPrefix,
+					},
+					{
+						Type:            ElementTypeArray,
+						Len:             2,
+						Value:           "2",
+						DescriptionType: ArrarysPrefix,
+					},
+					{
+						Type:            ElementTypeString,
+						Len:             4,
+						Value:           "abcd",
+						DescriptionType: BulkStringsPrefix,
+					},
+
+					{
+						Type:            ElementTypeString,
+						Len:             4,
+						Value:           "cdab",
+						DescriptionType: BulkStringsPrefix,
+					},
+					{
+						Type:            ElementTypeString,
+						Len:             4,
+						Value:           "eeee",
+						DescriptionType: BulkStringsPrefix,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validArray(tt.args.elements); (err != nil) != tt.wantErr {
+				t.Errorf("validArray() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
