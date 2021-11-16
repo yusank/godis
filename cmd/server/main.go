@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/yusank/godis/conn/handler"
+	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/server"
 )
 

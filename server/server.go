@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/yusank/godis/conn/handler"
 	"github.com/yusank/godis/conn/tcp"
+	"github.com/yusank/godis/handler"
 )
 
 type Server struct {

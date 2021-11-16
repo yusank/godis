@@ -34,7 +34,7 @@ func initElementFromLine(line []byte) (e *Element, err error) {
 	case DescriptionArray:
 		e = NewArrayElement(readBulkOrArrayLength(line))
 	default:
-		return nil, fmt.Errorf("unsupport protocal")
+		return nil, fmt.Errorf("unsupport protocal: %s", string(desc))
 	}
 
 	return
@@ -97,7 +97,6 @@ func readArray(r conn.Reader, ln int) ([]*Element, error) {
 				return nil, err1
 			}
 
-			log.Println(string(temp))
 			e.Value = string(temp)
 		}
 

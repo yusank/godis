@@ -8,7 +8,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/yusank/godis/conn/handler"
+	"github.com/yusank/godis/handler"
 )
 
 func Listen(ctx context.Context, address string, h handler.Handler) error {
@@ -48,9 +48,10 @@ func handle(ctx context.Context, conn net.Conn, h handler.Handler) {
 			reply, err := h.Handle(reader)
 			if err != nil {
 				log.Println("handle err:", err)
-				if err != io.EOF {
-					return
+				if err == io.EOF {
+					log.Println("eof")
 				}
+				return
 			}
 
 			if len(reply) == 0 {

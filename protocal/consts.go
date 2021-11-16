@@ -4,8 +4,8 @@ const (
 	DescriptionSimpleStrings = '+'
 	DescriptionErrors        = '-'
 	DescriptionIntegers      = ':'
-	DescriptionBulkStrings  = '$'
-	DescriptionArray          = '*'
+	DescriptionBulkStrings   = '$'
+	DescriptionArray         = '*'
 )
 
 const (
@@ -13,6 +13,9 @@ const (
 	CRLFDebug = "\\r\\n" // using when need to print \r\n
 
 	CRLFLen = len(CRLF)
+
+	OK   = "+OK\r\n"
+	Pong = "+pong\r\n"
 )
 
 const (
