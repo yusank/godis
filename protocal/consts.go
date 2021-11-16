@@ -1,11 +1,11 @@
 package protocal
 
 const (
-	SimpleStringsPrefix = '+'
-	ErrorsPrefix        = '-'
-	IntegersPrefix      = ':'
-	BulkStringsPrefix   = '$'
-	ArrarysPrefix       = '*'
+	DescriptionSimpleStrings = '+'
+	DescriptionErrors        = '-'
+	DescriptionIntegers      = ':'
+	DescriptionBulkStrings  = '$'
+	DescriptionArray          = '*'
 )
 
 const (

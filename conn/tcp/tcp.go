@@ -1,9 +1,9 @@
 package tcp
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/yusank/godis/conn/handler"
@@ -37,25 +37,30 @@ func Listen(ctx context.Context, address string, h handler.Handler) error {
 // handle by a new goroutine
 func handle(ctx context.Context, conn net.Conn, h handler.Handler) {
 	defer conn.Close()
-	reader := bufio.NewReader(conn)
+	//reader := bufio.NewReader(conn)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			data, _, err := reader.ReadLine()
+			buf := make([]byte, 1024)
+			n, err := conn.Read(buf)
+			//data, err := io.ReadAll(conn)
+			//data, _, err := reader.ReadLine()
 			if err != nil {
-				fmt.Println("readAll err:", err)
+				log.Println("readAll err:", err, " len:  ", n)
 				return
 			}
 
-			if err = h.Handle(data); err != nil {
+			reply, err := h.Handle(buf)
+			if err != nil {
+				log.Println("handle err:", err)
 				return
 			}
 
-			_, err = conn.Write(append(data, '\n'))
+			_, err = conn.Write(reply)
 			if err != nil {
-				fmt.Println("write err:", err)
+				log.Println("write err:", err)
 				return
 			}
 		}

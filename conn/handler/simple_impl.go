@@ -1,19 +1,20 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/yusank/godis/protocal"
 )
 
 type PrintHandler struct{}
 
-func (*PrintHandler) Handle(b []byte) error {
-	fmt.Println(string(b), len(b))
-	msg, err := protocal.NewMessage(b)
+func (PrintHandler) Handle(b []byte) ([]byte, error) {
+	log.Println(string(b), len(b))
+	msg, err := protocal.NewMessageFromBytes(b)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return msg.Encode()
+	err = msg.Encode()
+	return msg.OriginalData, err
 }

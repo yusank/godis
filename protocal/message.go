@@ -3,23 +3,66 @@ package protocal
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strconv"
 )
 
 type ElementType uint8
 
 type Element struct {
-	Type            ElementType // string int nil array
-	DescriptionType byte        // + - $ : *
-	Value           string
-	Len             int
+	Type        ElementType // string int nil array
+	Description byte        // + - $ : *
+	Value       string
+	Len         int // valid for bulk string and array
+}
+
+func NewSimpleStringElement(str string) *Element {
+	return &Element{
+		Type:        ElementTypeString,
+		Description: DescriptionSimpleStrings,
+		Value:       str,
+	}
+}
+
+func NewErrorElement(e string) *Element {
+	return &Element{
+		Type:        ElementTypeString,
+		Description: DescriptionErrors,
+		Value:       e,
+	}
+}
+
+func NewBulkStringElement(str string) *Element {
+	return &Element{
+		Type:        ElementTypeString,
+		Description: DescriptionBulkStrings,
+		Value:       str,
+		Len:         len(str),
+	}
+}
+
+func NewArrayElement(ln int) *Element {
+	return &Element{
+		Type:        ElementTypeArray,
+		Description: DescriptionArray,
+		Value:       strconv.Itoa(ln),
+		Len:         ln,
+	}
+}
+
+func NewIntegerElement(i int) *Element {
+	return &Element{
+		Type:        ElementTypeInt,
+		Description: DescriptionIntegers,
+		Value:       strconv.Itoa(i),
+	}
 }
 
 func (e *Element) String() string {
 	if e.Type == ElementTypeArray {
-		return fmt.Sprintf("type:%s, descType:%s, value:%d\n", ElementTypeMap[e.Type], string(e.DescriptionType), e.Len)
+		return fmt.Sprintf("type:%s, descType:%s, value:%d\n", ElementTypeMap[e.Type], string(e.Description), e.Len)
 	}
-	return fmt.Sprintf("type:%s, descType:%s, value:%s\n", ElementTypeMap[e.Type], string(e.DescriptionType), e.Value)
+	return fmt.Sprintf("type:%s, descType:%s, value:%s\n", ElementTypeMap[e.Type], string(e.Description), e.Value)
 }
 
 type Message struct {
@@ -27,7 +70,7 @@ type Message struct {
 	Elements     []*Element
 }
 
-func NewMessage(data []byte) (msg *Message, err error) {
+func NewMessageFromBytes(data []byte) (msg *Message, err error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("data cannot be empty")
 	}
@@ -48,20 +91,32 @@ func NewMessage(data []byte) (msg *Message, err error) {
 	return msg, nil
 }
 
+func NewMessage(opts ...Option) (msg *Message, err error) {
+	msg = &Message{
+		Elements: make([]*Element, 0),
+	}
+
+	for _, o := range opts {
+		o(msg)
+	}
+
+	return msg, nil
+}
+
 func (m *Message) Decode() error {
 	var (
 		startAt int
 		err     error
 	)
 
-	for startAt < len(m.OriginalData) {
+	for startAt < len(m.OriginalData) && m.OriginalData[startAt] != 0 {
 		startAt, err = m.decodeSingle(startAt)
 		if err != nil {
 			return err
 		}
 	}
 
-	// todo check array lenth is valid
+	m.OriginalData = m.OriginalData[:startAt]
 	return err
 }
 
@@ -71,18 +126,19 @@ func (m *Message) decodeSingle(startAt int) (n int, err error) {
 	}
 
 	var f readFunc
-	prefix := m.OriginalData[startAt]
-	switch prefix {
+	desc := m.OriginalData[startAt]
+	log.Println("desc: ", desc, string(desc))
+	switch desc {
 	// bulk string
-	case BulkStringsPrefix:
+	case DescriptionBulkStrings:
 		f = readBulkString
-	case SimpleStringsPrefix:
+	case DescriptionSimpleStrings:
 		f = readSimpleString
-	case ErrorsPrefix:
+	case DescriptionErrors:
 		f = readError
-	case IntegersPrefix:
+	case DescriptionIntegers:
 		f = readInteger
-	case ArrarysPrefix:
+	case DescriptionArray:
 		f = readArray
 	default:
 		return 0, fmt.Errorf("unsupport protocal")
@@ -102,7 +158,7 @@ func (m *Message) Encode() error {
 	var encodeByte = new(bytes.Buffer)
 
 	for _, e := range m.Elements {
-		encodeByte.WriteByte(e.DescriptionType)
+		encodeByte.WriteByte(e.Description)
 		if e.Len > 0 {
 			encodeByte.WriteString(strconv.Itoa(e.Len))
 			encodeByte.Write([]byte(CRLF))
@@ -176,8 +232,6 @@ func validArray(elements []*Element) error {
 
 	return nil
 }
-
-// todo: add check orginal data is valid
 
 /*
 *3\r\n

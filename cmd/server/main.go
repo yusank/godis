@@ -1,15 +1,11 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
+	"log"
 
 	"github.com/yusank/godis/conn/handler"
-	"github.com/yusank/godis/conn/tcp"
+	"github.com/yusank/godis/server"
 )
 
 func main() {
@@ -17,25 +13,9 @@ func main() {
 	flag.StringVar(&addr, "addr", ":7379", "server address")
 	flag.Parse()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	srv := server.NewServer(addr, nil, &handler.PrintHandler{})
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-
-	go func() {
-		if err := tcp.Listen(ctx, addr, &handler.PrintHandler{}); err != nil {
-			fmt.Println(err)
-			return
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return
-	case <-sig:
-		cancel()
+	if err := srv.Start(); err != nil {
+		log.Println("exiting: ", err)
 	}
-
-	fmt.Println("exit")
 }

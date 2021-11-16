@@ -15,9 +15,9 @@ func readBulkString(startAt int, data []byte) (ele *Element, newStartAt int, err
 		}
 
 		return &Element{
-			Type:            ElementTypeNil,
-			DescriptionType: BulkStringsPrefix,
-			Value:           "-1",
+			Type:        ElementTypeNil,
+			Description: DescriptionBulkStrings,
+			Value:       "-1",
 		}, startAt + 2 + CRLFLen, nil
 	}
 
@@ -31,9 +31,9 @@ func readBulkString(startAt int, data []byte) (ele *Element, newStartAt int, err
 	// $1\r\na\r\n
 	newStartAt += CRLFLen
 	ele = &Element{
-		Type:            ElementTypeString,
-		DescriptionType: BulkStringsPrefix,
-		Len:             ln,
+		Type:        ElementTypeString,
+		Description: DescriptionBulkStrings,
+		Len:         ln,
 	}
 
 	if ln > len(data[newStartAt:]) {
@@ -50,8 +50,8 @@ func readBulkString(startAt int, data []byte) (ele *Element, newStartAt int, err
 
 func readSimpleString(startAt int, data []byte) (ele *Element, newStartAt int, err error) {
 	ele = &Element{
-		Type:            ElementTypeString,
-		DescriptionType: SimpleStringsPrefix,
+		Type:        ElementTypeString,
+		Description: DescriptionSimpleStrings,
 	}
 
 	var b []byte
@@ -66,8 +66,8 @@ func readSimpleString(startAt int, data []byte) (ele *Element, newStartAt int, e
 
 func readError(startAt int, data []byte) (ele *Element, newStartAt int, err error) {
 	ele = &Element{
-		Type:            ElementTypeString,
-		DescriptionType: ErrorsPrefix,
+		Type:        ElementTypeString,
+		Description: DescriptionErrors,
 	}
 
 	var b []byte
@@ -82,8 +82,8 @@ func readError(startAt int, data []byte) (ele *Element, newStartAt int, err erro
 
 func readInteger(startAt int, data []byte) (ele *Element, newStartAt int, err error) {
 	ele = &Element{
-		Type:            ElementTypeString,
-		DescriptionType: IntegersPrefix,
+		Type:        ElementTypeString,
+		Description: DescriptionIntegers,
 	}
 
 	var b []byte
@@ -105,10 +105,10 @@ func readArray(startAt int, data []byte) (ele *Element, newStartAt int, err erro
 	}
 
 	ele = &Element{
-		Type:            ElementTypeArray,
-		DescriptionType: ArrarysPrefix,
-		Len:             ln,
-		Value:           strconv.Itoa(ln),
+		Type:        ElementTypeArray,
+		Description: DescriptionArray,
+		Len:         ln,
+		Value:       strconv.Itoa(ln),
 	}
 	newStartAt += CRLFLen
 	return
