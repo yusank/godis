@@ -14,6 +14,7 @@ import (
 type Server struct {
 	addr    string
 	ctx     context.Context
+	cancel  context.CancelFunc
 	handler handler.Handler
 }
 
@@ -21,11 +22,14 @@ func NewServer(addr string, ctx context.Context, h handler.Handler) *Server {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return &Server{
+
+	s := &Server{
 		addr:    addr,
-		ctx:     ctx,
 		handler: h,
 	}
+
+	s.ctx, s.cancel = context.WithCancel(ctx)
+	return s
 }
 
 func (s *Server) Start() error {
@@ -45,4 +49,8 @@ func (s *Server) Start() error {
 	case sig := <-sigChan:
 		return fmt.Errorf("kill by signal:%s", sig.String())
 	}
+}
+
+func (s *Server) Stop() {
+	s.cancel()
 }

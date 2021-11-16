@@ -9,7 +9,7 @@ import (
 	"github.com/yusank/godis/protocal"
 )
 
-func Test_basic_connection(t *testing.T) {
+func Test_SimpleString(t *testing.T) {
 	msgChan, cancel := prepare(":7379", t)
 	defer cancel()
 
@@ -19,11 +19,21 @@ func Test_basic_connection(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-func Test_bulk_msg(t *testing.T) {
+func Test_BulkString(t *testing.T) {
 	msgChan, cancel := prepare(":7379", t)
 	defer cancel()
 
 	msg := protocal.NewMessage(protocal.BulkString("Hello"))
+	msgChan <- msg
+	close(msgChan)
+	time.Sleep(time.Second)
+}
+
+func Test_Array(t *testing.T) {
+	msgChan, cancel := prepare(":7379", t)
+	defer cancel()
+
+	msg := protocal.NewMessage(protocal.Array(protocal.BulkString("hello"), protocal.SimpleString("world")))
 	msgChan <- msg
 	close(msgChan)
 	time.Sleep(time.Second)

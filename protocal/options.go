@@ -38,6 +38,7 @@ func Array(opts ...Option) Option {
 	}
 
 	return func(m *Message) {
+		m.Elements = append(m.Elements, NewArrayElement(len(opts)))
 		for _, opt := range opts {
 			opt(m)
 		}
