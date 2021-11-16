@@ -2,6 +2,12 @@ package protocal
 
 type Option func(m *Message)
 
+func WithElements(e ...*Element) Option {
+	return func(m *Message) {
+		m.Elements = append(m.Elements, e...)
+	}
+}
+
 func SimpleString(str string) Option {
 	return func(m *Message) {
 		m.Elements = append(m.Elements, NewSimpleStringElement(str))
@@ -20,9 +26,9 @@ func ErrorString(str string) Option {
 	}
 }
 
-func Integer(i int) Option {
+func Integer(is string) Option {
 	return func(m *Message) {
-		m.Elements = append(m.Elements, NewIntegerElement(i))
+		m.Elements = append(m.Elements, NewIntegerElement(is))
 	}
 }
 

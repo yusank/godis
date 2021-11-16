@@ -9,11 +9,12 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile)
 	var addr string
 	flag.StringVar(&addr, "addr", ":7379", "server address")
 	flag.Parse()
 
-	srv := server.NewServer(addr, nil, &handler.PrintHandler{})
+	srv := server.NewServer(addr, nil, &handler.MessageHandler{})
 
 	if err := srv.Start(); err != nil {
 		log.Println("exiting: ", err)

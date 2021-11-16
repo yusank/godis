@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+
+	"github.com/yusank/godis/conn"
 )
 
 type ElementType uint8
@@ -41,6 +43,14 @@ func NewBulkStringElement(str string) *Element {
 	}
 }
 
+func NewNilBulkStringElement() *Element {
+	return &Element{
+		Type:        ElementTypeNil,
+		Description: DescriptionBulkStrings,
+		Value:       "-1",
+	}
+}
+
 func NewArrayElement(ln int) *Element {
 	return &Element{
 		Type:        ElementTypeArray,
@@ -50,11 +60,11 @@ func NewArrayElement(ln int) *Element {
 	}
 }
 
-func NewIntegerElement(i int) *Element {
+func NewIntegerElement(is string) *Element {
 	return &Element{
 		Type:        ElementTypeInt,
 		Description: DescriptionIntegers,
-		Value:       strconv.Itoa(i),
+		Value:       is,
 	}
 }
 
@@ -66,33 +76,12 @@ func (e *Element) String() string {
 }
 
 type Message struct {
-	OriginalData []byte // unserialization data
+	originalData []byte // unserialization data
 	Elements     []*Element
 }
 
-func NewMessageFromBytes(data []byte) (msg *Message, err error) {
-	if len(data) == 0 {
-		return nil, fmt.Errorf("data cannot be empty")
-	}
-
-	msg = &Message{
-		OriginalData: data,
-		Elements:     make([]*Element, 0),
-	}
-
-	if err = msg.Decode(); err != nil {
-		return nil, fmt.Errorf("decode data fail. err: %w", err)
-	}
-
-	if err = validArray(msg.Elements); err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
-
-func NewMessage(opts ...Option) (msg *Message, err error) {
-	msg = &Message{
+func NewMessage(opts ...Option) *Message {
+	msg := &Message{
 		Elements: make([]*Element, 0),
 	}
 
@@ -100,58 +89,50 @@ func NewMessage(opts ...Option) (msg *Message, err error) {
 		o(msg)
 	}
 
-	return msg, nil
+	return msg
 }
 
-func (m *Message) Decode() error {
-	var (
-		startAt int
-		err     error
-	)
-
-	for startAt < len(m.OriginalData) && m.OriginalData[startAt] != 0 {
-		startAt, err = m.decodeSingle(startAt)
-		if err != nil {
-			return err
-		}
-	}
-
-	m.OriginalData = m.OriginalData[:startAt]
-	return err
-}
-
-func (m *Message) decodeSingle(startAt int) (n int, err error) {
-	if len(m.OriginalData) == 0 || startAt >= len(m.OriginalData) {
-		return 0, nil
-	}
-
-	var f readFunc
-	desc := m.OriginalData[startAt]
-	log.Println("desc: ", desc, string(desc))
-	switch desc {
-	// bulk string
-	case DescriptionBulkStrings:
-		f = readBulkString
-	case DescriptionSimpleStrings:
-		f = readSimpleString
-	case DescriptionErrors:
-		f = readError
-	case DescriptionIntegers:
-		f = readInteger
-	case DescriptionArray:
-		f = readArray
-	default:
-		return 0, fmt.Errorf("unsupport protocal")
-	}
-
-	element, st, err := f(startAt+1, m.OriginalData)
+func NewMessageFromReader(r conn.Reader) (msg *Message, err error) {
+	b, err := r.ReadBytes('\n')
 	if err != nil {
-		return 0, err
+		log.Println("readBytes err:", err)
+		return nil, err
 	}
 
-	m.Elements = append(m.Elements, element)
+	e, err := initElementFromLine(b)
+	if err != nil {
+		log.Println("init message err:", err)
+		return nil, err
+	}
 
-	return st, nil
+	if e.Description == DescriptionBulkStrings {
+		temp, err1 := readBulkStrings(r, e.Len)
+		if err1 != nil {
+			log.Println("read bulk str err:", err1)
+			return nil, err1
+		}
+
+		log.Println(string(temp))
+		e.Value = string(temp)
+	}
+
+	msg = NewMessage(WithElements(e))
+
+	if e.Description == DescriptionArray {
+		elements, err1 := readArray(r, e.Len)
+		if err1 != nil {
+			log.Println("read bulk str err:", err1)
+			return nil, err1
+		}
+
+		msg = NewMessage(WithElements(elements...))
+	}
+
+	return
+}
+
+func (m *Message) Bytes() []byte {
+	return m.originalData
 }
 
 func (m *Message) Encode() error {
@@ -172,13 +153,12 @@ func (m *Message) Encode() error {
 		encodeByte.Write([]byte(CRLF))
 	}
 
-	m.OriginalData = make([]byte, encodeByte.Len())
-	copy(m.OriginalData, encodeByte.Bytes())
+	m.originalData = make([]byte, encodeByte.Len())
+	copy(m.originalData, encodeByte.Bytes())
 
 	return nil
 }
 
-// todo check array value
 func validArray(elements []*Element) error {
 	var checkFunc func(int, int) (int, error)
 
@@ -232,14 +212,3 @@ func validArray(elements []*Element) error {
 
 	return nil
 }
-
-/*
-*3\r\n
-$3\r\n
-foo\r\n
-$-1\r\n
-$3\r\n
-bar\r\n
-
-["foo", nil, "bar"]
-*/

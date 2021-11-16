@@ -8,8 +8,8 @@ import (
 	"github.com/yusank/godis/server"
 )
 
-func startServer(ctx context.Context) {
-	srv := server.NewServer(":7379", ctx, handler.PrintHandler{})
+func startServer(addr string, ctx context.Context) {
+	srv := server.NewServer(addr, ctx, handler.MessageHandler{})
 
 	if err := srv.Start(); err != nil {
 		log.Println("exiting: ", err)
