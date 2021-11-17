@@ -5,9 +5,9 @@ import (
 	"net"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/yusank/godis/protocol"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func connAndSendMsg(addr string, msgChan chan *protocol.Message, t *testing.T) error {

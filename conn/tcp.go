@@ -1,4 +1,4 @@
-package tcp
+package conn
 
 import (
 	"bufio"
@@ -7,11 +7,9 @@ import (
 	"io"
 	"log"
 	"net"
-
-	"github.com/yusank/godis/handler"
 )
 
-func Listen(ctx context.Context, address string, h handler.Handler) error {
+func Listen(ctx context.Context, address string, h Handler) error {
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		return err
@@ -37,7 +35,7 @@ func Listen(ctx context.Context, address string, h handler.Handler) error {
 }
 
 // handle by a new goroutine
-func handle(ctx context.Context, conn net.Conn, h handler.Handler) {
+func handle(ctx context.Context, conn net.Conn, h Handler) {
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 	for {

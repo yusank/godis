@@ -1,4 +1,4 @@
-package protocol
+package redis
 
 type RedisCommand struct {
 	Command string

@@ -10,6 +10,7 @@ import (
 type MessageHandler struct{}
 
 func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
+	// io data to protocol msg
 	msg, err := protocol.NewMessageFromReader(r)
 	if err != nil {
 		return nil, err

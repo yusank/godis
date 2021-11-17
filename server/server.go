@@ -7,18 +7,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/yusank/godis/conn/tcp"
-	"github.com/yusank/godis/handler"
+	"github.com/yusank/godis/conn"
 )
 
 type Server struct {
 	addr    string
 	ctx     context.Context
 	cancel  context.CancelFunc
-	handler handler.Handler
+	handler conn.Handler
 }
 
-func NewServer(addr string, ctx context.Context, h handler.Handler) *Server {
+func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -37,7 +36,7 @@ func (s *Server) Start() error {
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	go func() {
-		if err := tcp.Listen(s.ctx, s.addr, s.handler); err != nil {
+		if err := conn.Listen(s.ctx, s.addr, s.handler); err != nil {
 			fmt.Println(err)
 			return
 		}

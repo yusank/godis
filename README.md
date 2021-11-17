@@ -13,3 +13,7 @@
 
 - persistence data to local
 - distribution (may be will support, not sure right now)
+
+## Design
+
+![data transfer](./static/godis_data_transfer.png)
