@@ -1,4 +1,4 @@
-package protocal
+package protocol
 
 type Option func(m *Message)
 
