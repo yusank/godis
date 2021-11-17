@@ -46,6 +46,7 @@ func (s *Server) Start() error {
 	case <-s.ctx.Done():
 		return s.ctx.Err()
 	case sig := <-sigChan:
+		s.Stop()
 		return fmt.Errorf("kill by signal:%s", sig.String())
 	}
 }

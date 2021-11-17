@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"log"
+	"context"
 
 	"github.com/yusank/godis/conn"
 	"github.com/yusank/godis/protocol"
+	"github.com/yusank/godis/redis"
 )
 
 type MessageHandler struct{}
@@ -16,14 +17,11 @@ func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
 		return nil, err
 	}
 
-	if len(msg.Elements) > 1 && msg.Elements[1].Value == "ping" {
-		return []byte(protocol.Pong), nil
+	c := redis.NewCommandFromMsg(msg)
+	rsp, err := c.Excute(context.Background())
+	if err != nil {
+		return nil, err
 	}
 
-	for _, e := range msg.Elements {
-		log.Println(string(e.Description), e.Value)
-	}
-
-	err = msg.Encode()
-	return msg.Bytes(), err
+	return rsp, err
 }

@@ -158,3 +158,7 @@ func (m *Message) Encode() error {
 
 	return nil
 }
+
+func BuildErrorResponseBystes(errStr string) []byte {
+	return []byte(fmt.Sprintf("-%s\r\n", errStr))
+}

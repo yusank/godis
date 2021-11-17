@@ -13,9 +13,12 @@ const (
 	CRLFDebug = "\\r\\n" // using when need to print \r\n
 
 	CRLFLen = len(CRLF)
+)
 
-	OK   = "+OK\r\n"
-	Pong = "+pong\r\n"
+var (
+	OK      = []byte("*1\r\n$2\r\nOK\r\n")
+	Pong    = []byte("*1\r\n$4\r\nPONG\r\n")
+	Command = []byte("*1\r\n$7\r\nCOMMAND\r\n")
 )
 
 const (

@@ -44,12 +44,12 @@ func handle(ctx context.Context, conn net.Conn, h Handler) {
 			return
 		default:
 			reply, err := h.Handle(reader)
+			if err == io.EOF {
+				return
+			}
+
 			if err != nil {
 				log.Println("handle err:", err)
-				if err == io.EOF {
-					log.Println("eof")
-				}
-				return
 			}
 
 			if len(reply) == 0 {
