@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,10 +12,11 @@ import (
 )
 
 type Server struct {
-	addr    string
-	ctx     context.Context
-	cancel  context.CancelFunc
-	handler conn.Handler
+	addr     string
+	ctx      context.Context
+	cancel   context.CancelFunc
+	handler  conn.Handler
+	listener net.Listener
 }
 
 func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
@@ -35,22 +37,26 @@ func (s *Server) Start() error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-	go func() {
-		if err := conn.Listen(s.ctx, s.addr, s.handler); err != nil {
-			fmt.Println(err)
-			return
-		}
-	}()
+	// 半阻塞，开始监听端口后异步处理
+	l, err := conn.Listen(s.ctx, s.addr, s.handler)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	s.listener = l
 
 	select {
 	case <-s.ctx.Done():
-		return s.ctx.Err()
+		return nil
 	case sig := <-sigChan:
 		s.Stop()
-		return fmt.Errorf("kill by signal:%s", sig.String())
+		fmt.Printf("kill by signal:%s", sig.String())
+		return nil
 	}
 }
 
 func (s *Server) Stop() {
+	s.listener.Close()
 	s.cancel()
 }

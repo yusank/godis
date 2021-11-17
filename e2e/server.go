@@ -1,17 +1,23 @@
 package e2e
 
 import (
-	"context"
-	"log"
+	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/server"
 )
 
-func startServer(addr string, ctx context.Context) {
-	srv := server.NewServer(addr, ctx, handler.MessageHandler{})
+func startServer(addr string, t *testing.T) *server.Server {
+	srv := server.NewServer(addr, nil, handler.MessageHandler{})
 
-	if err := srv.Start(); err != nil {
-		log.Println("exiting: ", err)
-	}
+	go func() {
+		if err := srv.Start(); err != nil {
+			assert.NoError(t, err)
+		}
+	}()
+
+	time.Sleep(time.Second)
+	return srv
 }

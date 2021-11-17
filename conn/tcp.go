@@ -3,32 +3,36 @@ package conn
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net"
 )
 
-func Listen(ctx context.Context, address string, h Handler) error {
-	l, err := net.Listen("tcp", address)
+func Listen(ctx context.Context, address string, h Handler) (l net.Listener, err error) {
+	l, err = net.Listen("tcp", address)
 	if err != nil {
-		return err
+		return
 	}
-	defer l.Close()
 
-	fmt.Println("start listen ", address)
+	log.Println("start listen ", address)
+	go handleListner(ctx, l, h)
+	return
+}
+
+func handleListner(ctx context.Context, l net.Listener, h Handler) {
+	defer l.Close()
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return
 		default:
 			conn, err := l.Accept()
 			if err != nil {
-				return err
+				log.Println("accept err:", err)
+				return
 			}
 
-			fmt.Println("new conn from:", conn.RemoteAddr().String())
-
+			log.Println("new conn from:", conn.RemoteAddr().String())
 			go handle(ctx, conn, h)
 		}
 	}

@@ -1,56 +1,39 @@
 package e2e
 
 import (
-	"context"
-	"log"
 	"testing"
-	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/yusank/godis/protocol"
 )
 
-func Test_SimpleString(t *testing.T) {
-	msgChan, cancel := prepare(":7379", t)
-	defer cancel()
+var (
+	_debug_addr = ":7379"
+)
 
-	msg := protocol.NewMessage(protocol.SimpleString("OK"))
-	msgChan <- msg
-	close(msgChan)
-	time.Sleep(time.Second)
+func Test_SimpleString(t *testing.T) {
+	srv := startServer(_debug_addr, t)
+
+	msg := protocol.NewMessage(protocol.SimpleString("PING"))
+	err := connAndSendMsg(_debug_addr, msg)
+	assert.NoError(t, err)
+	srv.Stop()
 }
 
 func Test_BulkString(t *testing.T) {
-	msgChan, cancel := prepare(":7379", t)
-	defer cancel()
+	srv := startServer(_debug_addr, t)
 
-	msg := protocol.NewMessage(protocol.BulkString("Hello"))
-	msgChan <- msg
-	close(msgChan)
-	time.Sleep(time.Second)
+	msg := protocol.NewMessage(protocol.BulkString("GET"))
+	err := connAndSendMsg(_debug_addr, msg)
+	assert.NoError(t, err)
+	srv.Stop()
 }
 
 func Test_Array(t *testing.T) {
-	msgChan, cancel := prepare(":7379", t)
-	defer cancel()
+	srv := startServer(_debug_addr, t)
 
-	msg := protocol.NewMessage(protocol.Array(protocol.BulkString("hello"), protocol.SimpleString("world")))
-	msgChan <- msg
-	close(msgChan)
-	time.Sleep(time.Second)
-}
-
-func prepare(addr string, t *testing.T) (msgChan chan *protocol.Message, cancel context.CancelFunc) {
-	log.SetFlags(log.Lshortfile)
-	ctx, cancel := context.WithCancel(context.Background())
-	go startServer(addr, ctx)
-	time.Sleep(time.Second)
-
-	msgChan = make(chan *protocol.Message, 1)
-
-	go func() {
-		_ = connAndSendMsg(addr, msgChan, t)
-	}()
-
-	return msgChan, cancel
-
+	msg := protocol.NewMessage(protocol.Array(protocol.BulkString("MGET"), protocol.SimpleString("key1")))
+	err := connAndSendMsg(_debug_addr, msg)
+	assert.NoError(t, err)
+	srv.Stop()
 }
