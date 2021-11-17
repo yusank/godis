@@ -4,19 +4,19 @@ import (
 	"log"
 
 	"github.com/yusank/godis/conn"
-	"github.com/yusank/godis/protocal"
+	"github.com/yusank/godis/protocol"
 )
 
 type MessageHandler struct{}
 
 func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
-	msg, err := protocal.NewMessageFromReader(r)
+	msg, err := protocol.NewMessageFromReader(r)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(msg.Elements) > 1 && msg.Elements[1].Value == "ping" {
-		return []byte(protocal.Pong), nil
+		return []byte(protocol.Pong), nil
 	}
 
 	for _, e := range msg.Elements {

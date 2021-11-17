@@ -1,4 +1,4 @@
-# protocal
+# protocol
 
 使用  RESP (REdis Serialization Protocol)。
 

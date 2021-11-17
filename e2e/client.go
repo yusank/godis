@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yusank/godis/protocal"
+	"github.com/yusank/godis/protocol"
 )
 
-func connAndSendMsg(addr string, msgChan chan *protocal.Message, t *testing.T) error {
+func connAndSendMsg(addr string, msgChan chan *protocol.Message, t *testing.T) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err

@@ -13,7 +13,7 @@ func initElementFromLine(line []byte) (e *Element, err error) {
 	}
 
 	if len(line) < 3 {
-		return nil, fmt.Errorf("unsupported protocal")
+		return nil, fmt.Errorf("unsupported protocol")
 	}
 
 	desc := line[0]
@@ -34,7 +34,7 @@ func initElementFromLine(line []byte) (e *Element, err error) {
 	case DescriptionArray:
 		e = NewArrayElement(readBulkOrArrayLength(line))
 	default:
-		return nil, fmt.Errorf("unsupport protocal: %s", string(desc))
+		return nil, fmt.Errorf("unsupport protocol: %s", string(desc))
 	}
 
 	return
