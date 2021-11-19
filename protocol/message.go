@@ -4,89 +4,46 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"strconv"
+	"strings"
 
 	"github.com/yusank/godis/conn"
 )
 
-type ElementType uint8
-
 type Element struct {
-	Type        ElementType // string int nil array
-	Description byte        // + - $ : *
+	Description byte // + - $ : *
 	Value       string
 	Len         int // valid for bulk string and array
 }
 
-func NewSimpleStringElement(str string) *Element {
-	return &Element{
-		Type:        ElementTypeString,
-		Description: DescriptionSimpleStrings,
-		Value:       str,
-	}
-}
-
-func NewErrorElement(e string) *Element {
-	return &Element{
-		Type:        ElementTypeString,
-		Description: DescriptionErrors,
-		Value:       e,
-	}
-}
-
-func NewBulkStringElement(str string) *Element {
-	return &Element{
-		Type:        ElementTypeString,
-		Description: DescriptionBulkStrings,
-		Value:       str,
-		Len:         len(str),
-	}
-}
-
-func NewNilBulkStringElement() *Element {
-	return &Element{
-		Type:        ElementTypeNil,
-		Description: DescriptionBulkStrings,
-		Value:       "-1",
-	}
-}
-
-func NewArrayElement(ln int) *Element {
-	return &Element{
-		Type:        ElementTypeArray,
-		Description: DescriptionArray,
-		Value:       strconv.Itoa(ln),
-		Len:         ln,
-	}
-}
-
-func NewIntegerElement(is string) *Element {
-	return &Element{
-		Type:        ElementTypeInt,
-		Description: DescriptionIntegers,
-		Value:       is,
-	}
-}
-
 func (e *Element) String() string {
-	if e.Type == ElementTypeArray {
-		return fmt.Sprintf("type:%s, descType:%s, value:%d\n", ElementTypeMap[e.Type], string(e.Description), e.Len)
-	}
-	return fmt.Sprintf("type:%s, descType:%s, value:%s\n", ElementTypeMap[e.Type], string(e.Description), e.Value)
+	return fmt.Sprintf("descType:%s, value:%s\n", string(e.Description), e.Value)
 }
 
 type Message struct {
-	originalData []byte // unserialization data
-	Elements     []*Element
+	originalData *bytes.Buffer // unserialization data
+	Elements     []*Element    // only use for transfer to command
 }
 
 func NewMessage(opts ...Option) *Message {
 	msg := &Message{
-		Elements: make([]*Element, 0),
+		originalData: new(bytes.Buffer),
+		Elements:     make([]*Element, 0),
 	}
 
 	for _, o := range opts {
 		o(msg)
+	}
+
+	return msg
+}
+
+func NewMessageFromEncodeData(encodeData ...string) *Message {
+	msg := &Message{
+		originalData: new(bytes.Buffer),
+	}
+
+	for _, str := range encodeData {
+		_, _ = msg.originalData.WriteString(str)
 	}
 
 	return msg
@@ -118,7 +75,8 @@ func NewMessageFromReader(r conn.Reader) (msg *Message, err error) {
 
 	msg = NewMessage(WithElements(e))
 
-	if e.Description == DescriptionArray {
+	if e.Description == descriptionArray {
+		// won't sava array element
 		elements, err1 := readArray(r, e.Len)
 		if err1 != nil {
 			log.Println("read bulk str err:", err1)
@@ -132,33 +90,20 @@ func NewMessageFromReader(r conn.Reader) (msg *Message, err error) {
 }
 
 func (m *Message) Bytes() []byte {
-	return m.originalData
+	return m.originalData.Bytes()
 }
 
-func (m *Message) Encode() error {
-	var encodeByte = new(bytes.Buffer)
+func (m *Message) String() string {
+	sb := new(strings.Builder)
 
-	for _, e := range m.Elements {
-		encodeByte.WriteByte(e.Description)
-		if e.Len > 0 {
-			encodeByte.WriteString(strconv.Itoa(e.Len))
-			encodeByte.Write([]byte(CRLF))
+	_, _ = sb.WriteString("[ ")
+	for i, e := range m.Elements {
+		_, _ = sb.WriteString(e.Value)
+		if i < len(m.Elements)-1 {
+			_, _ = sb.WriteString(", ")
 		}
-
-		if e.Type == ElementTypeArray {
-			continue
-		}
-
-		encodeByte.WriteString(e.Value)
-		encodeByte.Write([]byte(CRLF))
 	}
+	_, _ = sb.WriteString(" ]")
 
-	m.originalData = make([]byte, encodeByte.Len())
-	copy(m.originalData, encodeByte.Bytes())
-
-	return nil
-}
-
-func BuildErrorResponseBystes(errStr string) []byte {
-	return []byte(fmt.Sprintf("-%s\r\n", errStr))
+	return sb.String()
 }

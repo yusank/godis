@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"log"
 	"net"
 
 	"github.com/yusank/godis/protocol"
@@ -13,21 +12,17 @@ func connAndSendMsg(addr string, msg *protocol.Message) error {
 		return err
 	}
 
-	if err = msg.Encode(); err != nil {
-		return err
-	}
-
 	n, err1 := conn.Write(msg.Bytes())
 	if err1 != nil {
 		return err1
 	}
-	log.Println("write from client:", string(msg.Bytes()), n)
+	// log.Println("write from client:", string(msg.Bytes()), n)
 
 	buf := make([]byte, n)
 	n, err1 = conn.Read(buf)
 	if err1 != nil {
 		return err1
 	}
-	log.Println("read from conn: ", string(buf), n)
+	// log.Println("read from conn: ", string(buf), n)
 	return nil
 }

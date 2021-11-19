@@ -13,5 +13,5 @@ const (
 )
 
 var (
-	UnknownCommand = errors.New("unknown command key")
+	ErrUnknownCommand = errors.New("unknown command key")
 )

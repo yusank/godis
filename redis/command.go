@@ -22,11 +22,6 @@ type Command struct {
 func NewCommandFromMsg(msg *protocol.Message) *Command {
 	c := new(Command)
 	for _, e := range msg.Elements {
-		log.Println(string(e.Description), e.Len, e.Value)
-		if e.Description == protocol.DescriptionArray {
-			continue
-		}
-
 		if c.Command == "" {
 			c.Command = strings.ToLower(e.Value)
 			continue
@@ -35,13 +30,14 @@ func NewCommandFromMsg(msg *protocol.Message) *Command {
 		c.Values = append(c.Values, e.Value)
 	}
 
+	log.Println("command: ", c.Command)
 	return c
 }
 
 func (c *Command) Excute(ctx context.Context) (rsp []byte, err error) {
 	f, ok := KnownCommands[c.Command]
 	if !ok {
-		return protocol.BuildErrorResponseBystes(UnknownCommand.Error()), nil
+		return []byte(protocol.EncodeDataWithError(ErrUnknownCommand)), nil
 	}
 
 	return f(c)

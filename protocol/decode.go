@@ -3,9 +3,58 @@ package protocol
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/yusank/godis/conn"
 )
+
+/*
+ * put all messages and elements decode funtions
+ */
+
+func NewSimpleStringElement(str string) *Element {
+	return &Element{
+		Description: DescriptionSimpleStrings,
+		Value:       str,
+	}
+}
+
+func NewErrorElement(e string) *Element {
+	return &Element{
+		Description: DescriptionErrors,
+		Value:       e,
+	}
+}
+
+func NewBulkStringElement(str string) *Element {
+	return &Element{
+		Description: DescriptionBulkStrings,
+		Value:       str,
+	}
+}
+
+func NewNilBulkStringElement() *Element {
+	return &Element{
+		Description: DescriptionBulkStrings,
+		Value:       "-1",
+	}
+}
+
+func NewIntegerElement(is string) *Element {
+	return &Element{
+		Description: DescriptionIntegers,
+		Value:       is,
+	}
+}
+
+// only use when decode protocal data to msg won't store in elements slice
+func newArrayElement(ln int) *Element {
+	return &Element{
+		Description: descriptionArray,
+		Value:       strconv.Itoa(ln),
+		Len:         ln,
+	}
+}
 
 func initElementFromLine(line []byte) (e *Element, err error) {
 	if len(line) == 0 {
@@ -26,13 +75,13 @@ func initElementFromLine(line []byte) (e *Element, err error) {
 			e = NewNilBulkStringElement()
 		}
 	case DescriptionSimpleStrings:
-		e = NewSimpleStringElement(string(line[1 : len(line)-2]))
+		e = NewSimpleStringElement(string(line[1 : len(line)-CRLFLen]))
 	case DescriptionErrors:
-		e = NewErrorElement(string(line[1 : len(line)-2]))
+		e = NewErrorElement(string(line[1 : len(line)-CRLFLen]))
 	case DescriptionIntegers:
-		e = NewIntegerElement(string(line[1 : len(line)-2]))
-	case DescriptionArray:
-		e = NewArrayElement(readBulkOrArrayLength(line))
+		e = NewIntegerElement(string(line[1 : len(line)-CRLFLen]))
+	case descriptionArray:
+		e = newArrayElement(readBulkOrArrayLength(line))
 	default:
 		return nil, fmt.Errorf("unsupport protocol: %s", string(desc))
 	}
@@ -69,14 +118,14 @@ func readBulkStrings(r conn.Reader, ln int) (val []byte, err error) {
 }
 
 func readArray(r conn.Reader, ln int) ([]*Element, error) {
-	elements := []*Element{NewArrayElement(ln)}
+	elements := []*Element{}
 	for i := 0; i < ln; i++ {
 		line, err := r.ReadBytes('\n')
 		if err != nil {
 			return nil, err
 		}
 
-		if line[0] == DescriptionArray {
+		if line[0] == descriptionArray {
 			sub, subErr := readArray(r, readBulkOrArrayLength(line))
 			if subErr != nil {
 				return nil, subErr

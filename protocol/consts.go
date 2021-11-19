@@ -1,11 +1,11 @@
 package protocol
 
 const (
-	DescriptionSimpleStrings = '+'
-	DescriptionErrors        = '-'
-	DescriptionIntegers      = ':'
-	DescriptionBulkStrings   = '$'
-	DescriptionArray         = '*'
+	DescriptionSimpleStrings byte = '+'
+	DescriptionErrors        byte = '-'
+	DescriptionIntegers      byte = ':'
+	DescriptionBulkStrings   byte = '$'
+	descriptionArray         byte = '*' // unexpose to external packages
 )
 
 const (
@@ -20,17 +20,3 @@ var (
 	Pong    = []byte("*1\r\n$4\r\nPONG\r\n")
 	Command = []byte("*1\r\n$7\r\nCOMMAND\r\n")
 )
-
-const (
-	ElementTypeString ElementType = iota + 1
-	ElementTypeInt
-	ElementTypeNil
-	ElementTypeArray
-)
-
-var ElementTypeMap = map[ElementType]string{
-	ElementTypeString: "string",
-	ElementTypeInt:    "int",
-	ElementTypeNil:    "nil",
-	ElementTypeArray:  "array",
-}

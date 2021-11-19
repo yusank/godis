@@ -14,7 +14,7 @@ var (
 func Test_SimpleString(t *testing.T) {
 	srv := startServer(_debug_addr, t)
 
-	msg := protocol.NewMessage(protocol.SimpleString("PING"))
+	msg := protocol.NewMessageFromEncodeData(protocol.EncodeDataWithSimpleString("PING"))
 	err := connAndSendMsg(_debug_addr, msg)
 	assert.NoError(t, err)
 	srv.Stop()
@@ -23,7 +23,7 @@ func Test_SimpleString(t *testing.T) {
 func Test_BulkString(t *testing.T) {
 	srv := startServer(_debug_addr, t)
 
-	msg := protocol.NewMessage(protocol.BulkString("GET"))
+	msg := protocol.NewMessageFromEncodeData(protocol.EncodeDataWithBulkString("GET"))
 	err := connAndSendMsg(_debug_addr, msg)
 	assert.NoError(t, err)
 	srv.Stop()
@@ -32,7 +32,10 @@ func Test_BulkString(t *testing.T) {
 func Test_Array(t *testing.T) {
 	srv := startServer(_debug_addr, t)
 
-	msg := protocol.NewMessage(protocol.Array(protocol.BulkString("MGET"), protocol.SimpleString("key1")))
+	msg := protocol.NewMessageFromEncodeData(protocol.EncodeDataWithArray(
+		protocol.EncodeDataWithBulkString("MGET"),
+		protocol.EncodeDataWithBulkString("key1"),
+	))
 	err := connAndSendMsg(_debug_addr, msg)
 	assert.NoError(t, err)
 	srv.Stop()

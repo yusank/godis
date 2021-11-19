@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 
 	"github.com/yusank/godis/conn"
 	"github.com/yusank/godis/protocol"
@@ -16,6 +17,7 @@ func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println(msg)
 
 	c := redis.NewCommandFromMsg(msg)
 	rsp, err := c.Excute(context.Background())
