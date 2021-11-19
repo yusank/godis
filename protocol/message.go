@@ -24,7 +24,7 @@ type Message struct {
 	Elements     []*Element    // only use for transfer to command
 }
 
-func NewMessage(opts ...Option) *Message {
+func newMessageFromOption(opts ...option) *Message {
 	msg := &Message{
 		originalData: new(bytes.Buffer),
 		Elements:     make([]*Element, 0),
@@ -37,15 +37,38 @@ func NewMessage(opts ...Option) *Message {
 	return msg
 }
 
-func NewMessageFromEncodeData(encodeData ...string) *Message {
+// NewMessageFromBulkStrings build message form native string slice
+// For example strSlice = ["GET", "Key"]  ==>
+//*3\r\n
+// $3\r\n
+// GET\r\n
+// $3\r\n
+// key\r\n
+// new line for readable
+func NewMessageFromBulkStrings(strSlice ...string) *Message {
 	msg := &Message{
 		originalData: new(bytes.Buffer),
 	}
 
-	for _, str := range encodeData {
-		_, _ = msg.originalData.WriteString(str)
+	_, _ = msg.originalData.WriteString(encodeBulkStrings(strSlice...))
+	return msg
+}
+
+func NewMessageFromSimpleStrings(str string) *Message {
+	msg := &Message{
+		originalData: new(bytes.Buffer),
 	}
 
+	_, _ = msg.originalData.WriteString(encodeSimpleString(str))
+	return msg
+}
+
+func NewMessageFromError(err error) *Message {
+	msg := &Message{
+		originalData: new(bytes.Buffer),
+	}
+
+	_, _ = msg.originalData.WriteString(encodeError(err))
 	return msg
 }
 
@@ -73,7 +96,7 @@ func NewMessageFromReader(r conn.Reader) (msg *Message, err error) {
 		e.Value = string(temp)
 	}
 
-	msg = NewMessage(WithElements(e))
+	msg = newMessageFromOption(withElements(e))
 
 	if e.Description == descriptionArray {
 		// won't sava array element
@@ -83,7 +106,7 @@ func NewMessageFromReader(r conn.Reader) (msg *Message, err error) {
 			return nil, err1
 		}
 
-		msg = NewMessage(WithElements(elements...))
+		msg = newMessageFromOption(withElements(elements...))
 	}
 
 	return

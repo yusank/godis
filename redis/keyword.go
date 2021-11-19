@@ -1,27 +1,28 @@
 package redis
 
-import "github.com/yusank/godis/protocol"
+// ExecuteFunc define command execute, returns slice of string as result and error if has any error occur .
+type ExecuteFunc func(*Command) ([]string, error)
 
-type ExecuteFunc func(*Command) ([]byte, error)
-
-func defaultExecFunc(c *Command) ([]byte, error) {
-	return protocol.OK, nil
+func defaultExecFunc(c *Command) ([]string, error) {
+	return []string{RespOK}, nil
 }
 
 var KnownCommands = map[string]ExecuteFunc{
 	// native
-	"command": func(c *Command) ([]byte, error) {
-		return protocol.Command, nil
+	"command": func(c *Command) ([]string, error) {
+		return []string{RespCommand}, nil
 	},
-	"ping": func(c *Command) ([]byte, error) {
-		return protocol.Pong, nil
+	"ping": func(c *Command) ([]string, error) {
+		return []string{RespPong}, nil
 	},
 	// strings
 	"append": defaultExecFunc,
 	"incr":   defaultExecFunc,
 	"decr":   defaultExecFunc,
 	"get":    defaultExecFunc,
-	"mget":   defaultExecFunc,
-	"set":    defaultExecFunc,
+	"mget": func(c *Command) ([]string, error) {
+		return c.Values, nil
+	},
+	"set": defaultExecFunc,
 	//... more
 }

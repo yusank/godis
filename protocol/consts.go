@@ -14,9 +14,3 @@ const (
 
 	CRLFLen = len(CRLF)
 )
-
-var (
-	OK      = []byte("*1\r\n$2\r\nOK\r\n")
-	Pong    = []byte("*1\r\n$4\r\nPONG\r\n")
-	Command = []byte("*1\r\n$7\r\nCOMMAND\r\n")
-)

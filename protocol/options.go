@@ -1,17 +1,9 @@
 package protocol
 
-type Option func(m *Message)
+type option func(m *Message)
 
-func WithElements(e ...*Element) Option {
+func withElements(e ...*Element) option {
 	return func(m *Message) {
 		m.Elements = append(m.Elements, e...)
-	}
-}
-
-func WithProtocolData(strSlice ...string) Option {
-	return func(m *Message) {
-		for _, s := range strSlice {
-			m.originalData.WriteString(s)
-		}
 	}
 }

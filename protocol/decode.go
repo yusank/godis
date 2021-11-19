@@ -12,35 +12,35 @@ import (
  * put all messages and elements decode funtions
  */
 
-func NewSimpleStringElement(str string) *Element {
+func newSimpleStringElement(str string) *Element {
 	return &Element{
 		Description: DescriptionSimpleStrings,
 		Value:       str,
 	}
 }
 
-func NewErrorElement(e string) *Element {
+func newErrorElement(e string) *Element {
 	return &Element{
 		Description: DescriptionErrors,
 		Value:       e,
 	}
 }
 
-func NewBulkStringElement(str string) *Element {
+func newBulkStringElement(str string) *Element {
 	return &Element{
 		Description: DescriptionBulkStrings,
 		Value:       str,
 	}
 }
 
-func NewNilBulkStringElement() *Element {
+func newNilBulkStringElement() *Element {
 	return &Element{
 		Description: DescriptionBulkStrings,
 		Value:       "-1",
 	}
 }
 
-func NewIntegerElement(is string) *Element {
+func newIntegerElement(is string) *Element {
 	return &Element{
 		Description: DescriptionIntegers,
 		Value:       is,
@@ -69,17 +69,17 @@ func initElementFromLine(line []byte) (e *Element, err error) {
 	switch desc {
 	// bulk string
 	case DescriptionBulkStrings:
-		e = NewBulkStringElement("")
+		e = newBulkStringElement("")
 		e.Len = readBulkOrArrayLength(line)
 		if e.Len < 0 {
-			e = NewNilBulkStringElement()
+			e = newNilBulkStringElement()
 		}
 	case DescriptionSimpleStrings:
-		e = NewSimpleStringElement(string(line[1 : len(line)-CRLFLen]))
+		e = newSimpleStringElement(string(line[1 : len(line)-CRLFLen]))
 	case DescriptionErrors:
-		e = NewErrorElement(string(line[1 : len(line)-CRLFLen]))
+		e = newErrorElement(string(line[1 : len(line)-CRLFLen]))
 	case DescriptionIntegers:
-		e = NewIntegerElement(string(line[1 : len(line)-CRLFLen]))
+		e = newIntegerElement(string(line[1 : len(line)-CRLFLen]))
 	case descriptionArray:
 		e = newArrayElement(readBulkOrArrayLength(line))
 	default:

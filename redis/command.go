@@ -10,9 +10,7 @@ import (
 
 type Command struct {
 	Command string
-	Keys    []string
 	Values  []string
-	Options []string
 }
 
 // sadd key1 value1
@@ -34,11 +32,19 @@ func NewCommandFromMsg(msg *protocol.Message) *Command {
 	return c
 }
 
-func (c *Command) Excute(ctx context.Context) (rsp []byte, err error) {
+// 1. check cmd is valid
+// 2. found cmd excute func
+
+func (c *Command) Execute(ctx context.Context) (rsp []byte, err error) {
 	f, ok := KnownCommands[c.Command]
 	if !ok {
-		return []byte(protocol.EncodeDataWithError(ErrUnknownCommand)), nil
+		return wrapError(ErrUnknownCommand), nil
 	}
 
-	return f(c)
+	result, err := f(c)
+	if err != nil {
+		return wrapError(err), nil
+	}
+
+	return wrapResult(result), nil
 }
