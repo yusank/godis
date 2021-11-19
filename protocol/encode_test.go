@@ -34,8 +34,8 @@ func TestEncodeDataWithSimpleString(t *testing.T) {
 
 func TestEncodeDataWithArray(t *testing.T) {
 	var want = "*2\r\n$6\r\nHello \r\n$5\r\nWorld\r\n"
-	assert.Equal(t, want, encodeDataWithArray(
-		encodeBulkString("Hello "),
-		encodeBulkString("World"),
+	assert.Equal(t, want, encodeBulkStrings(
+		"Hello ",
+		"World",
 	))
 }

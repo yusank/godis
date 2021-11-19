@@ -36,15 +36,6 @@ func NewCommandFromMsg(msg *protocol.Message) *Command {
 // 2. found cmd excute func
 
 func (c *Command) Execute(ctx context.Context) (rsp []byte, err error) {
-	f, ok := KnownCommands[c.Command]
-	if !ok {
-		return wrapError(ErrUnknownCommand), nil
-	}
-
-	result, err := f(c)
-	if err != nil {
-		return wrapError(err), nil
-	}
-
-	return wrapResult(result), nil
+	//return exec(c)
+	return wrapResult([]string{RespOK}), err
 }

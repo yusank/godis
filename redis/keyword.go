@@ -1,28 +1,26 @@
 package redis
 
 // ExecuteFunc define command execute, returns slice of string as result and error if has any error occur .
-type ExecuteFunc func(*Command) ([]string, error)
+type ExecuteFunc func(*Command) ([]interface{}, error)
 
-func defaultExecFunc(c *Command) ([]string, error) {
-	return []string{RespOK}, nil
+func defaultExecFunc(c *Command) ([]interface{}, error) {
+	return []interface{}{RespOK}, nil
 }
 
 var KnownCommands = map[string]ExecuteFunc{
 	// native
-	"command": func(c *Command) ([]string, error) {
-		return []string{RespCommand}, nil
+	"command": func(c *Command) ([]interface{}, error) {
+		return []interface{}{RespCommand}, nil
 	},
-	"ping": func(c *Command) ([]string, error) {
-		return []string{RespPong}, nil
+	"ping": func(c *Command) ([]interface{}, error) {
+		return []interface{}{RespPong}, nil
 	},
 	// strings
 	"append": defaultExecFunc,
 	"incr":   defaultExecFunc,
 	"decr":   defaultExecFunc,
 	"get":    defaultExecFunc,
-	"mget": func(c *Command) ([]string, error) {
-		return c.Values, nil
-	},
-	"set": defaultExecFunc,
+	"mget":   defaultExecFunc,
+	"set":    defaultExecFunc,
 	//... more
 }
