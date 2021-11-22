@@ -17,7 +17,7 @@ func encodeBulkString(str string) string {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(str), str)
 }
 
-func encodeNilString(_ string) string {
+func encodeNilString() string {
 	return "$-1\r\n"
 }
 
@@ -31,7 +31,7 @@ func encodeInteger(str string) string {
 
 func encodeBulkStrings(strSlice ...string) string {
 	if len(strSlice) == 0 {
-		return encodeNilString("")
+		return encodeNilString()
 	}
 
 	sb := new(strings.Builder)

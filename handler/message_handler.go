@@ -21,10 +21,7 @@ func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
 	log.Println(msg)
 
 	c := redis.NewCommandFromMsg(msg)
-	rsp, err := c.Execute(context.Background())
-	if err != nil {
-		return nil, err
-	}
+	rsp := c.Execute(context.Background())
 
 	log.Println("rsp:", debug.Escape(string(rsp)))
 	return rsp, err

@@ -54,6 +54,35 @@ func NewMessageFromBulkStrings(strSlice ...string) *Message {
 	return msg
 }
 
+func NewMessageFromResults(results []interface{}) *Message {
+	msg := &Message{
+		originalData: new(bytes.Buffer),
+	}
+
+	if len(results) == 0 {
+		return nil
+	}
+
+	_, _ = msg.originalData.WriteString(fmt.Sprintf("*%d\r\n", len(results)))
+	for _, result := range results {
+		if result == nil {
+			_, _ = msg.originalData.WriteString(encodeNilString())
+			continue
+		}
+
+		switch v := result.(type) {
+		case uint, uint64, int, int64, float64:
+			_, _ = msg.originalData.WriteString(encodeInteger(fmt.Sprintf("%v", v)))
+		case string:
+			_, _ = msg.originalData.WriteString(encodeBulkString(v))
+		case error:
+			_, _ = msg.originalData.WriteString(encodeError(v))
+		}
+	}
+
+	return msg
+}
+
 func NewMessageFromSimpleStrings(str string) *Message {
 	msg := &Message{
 		originalData: new(bytes.Buffer),

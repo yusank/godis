@@ -35,7 +35,12 @@ func NewCommandFromMsg(msg *protocol.Message) *Command {
 // 1. check cmd is valid
 // 2. found cmd excute func
 
-func (c *Command) Execute(ctx context.Context) (rsp []byte, err error) {
-	//return exec(c)
-	return wrapResult([]string{RespOK}), err
+// Execute only return rsp bytes
+// if got any error when execution will transfer protocol bytes
+func (c *Command) Execute(ctx context.Context) (rsp []byte) {
+	result, err := exec(c)
+	if err != nil {
+		return wrapError(err)
+	}
+	return wrapResult(result)
 }

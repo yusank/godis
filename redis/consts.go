@@ -3,7 +3,8 @@ package redis
 import "errors"
 
 var (
-	ErrUnknownCommand = errors.New("unknown command key")
+	ErrUnknownCommand       = errors.New("unknown command key")
+	ErrCommandArgsNotEnough = errors.New("command args not enough")
 )
 
 var (

@@ -16,23 +16,66 @@ func newMemoryCache() *MemoryCache {
 }
 
 type KeyInfo struct {
-	Type KeyType
+	Type  KeyType
+	Value interface{}
 }
 
-func (m *MemoryCache) Exists(key string) bool {
-	_, ok := m.keys.Load(key)
+/*
+ * Common Command
+ */
+
+func Exists(key string) bool {
+	_, ok := defaultCache.keys.Load(key)
 	return ok
 }
-
-func (m *MemoryCache) Set(key string, kt KeyType) {
-	m.keys.Store(key, &KeyInfo{Type: kt})
-}
-
-func (m *MemoryCache) Type(key string) (kt KeyType, found bool) {
-	v, ok := m.keys.Load(key)
+func Type(key string) (kt KeyType, found bool) {
+	v, ok := defaultCache.keys.Load(key)
 	if !ok {
 		return "", false
 	}
 
 	return v.(*KeyInfo).Type, true
+}
+
+/*
+ * String Command
+ */
+
+func Set(key, value string, options ...string) {
+	defaultCache.keys.Store(key, &KeyInfo{Type: KeyTypeString, Value: value})
+}
+
+func Get(key string) (string, error) {
+	v, ok := defaultCache.keys.Load(key)
+	if !ok {
+		return "", ErrNil
+	}
+
+	info := v.(*KeyInfo)
+	if info.Type != KeyTypeString {
+		return "", ErrKeyAndCommandNotMatch
+	}
+
+	return info.Value.(string), nil
+}
+
+func MGet(keys ...string) []interface{} {
+	var result []interface{}
+
+	for _, key := range keys {
+		val, err := Get(key)
+		if err == ErrNil {
+			result = append(result, nil)
+			continue
+		}
+
+		if err != nil {
+			result = append(result, err)
+			continue
+		}
+
+		result = append(result, val)
+	}
+
+	return result
 }
