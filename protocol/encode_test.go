@@ -24,7 +24,7 @@ func TestEncodeDataWithBulkString(t *testing.T) {
 
 func TestEncodeDataWithNilString(t *testing.T) {
 	var want = "$-1\r\n"
-	assert.Equal(t, want, encodeNilString(""))
+	assert.Equal(t, want, encodeNilString())
 }
 
 func TestEncodeDataWithSimpleString(t *testing.T) {
