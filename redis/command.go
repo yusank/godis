@@ -17,15 +17,15 @@ type Command struct {
 // hadd key1 hkey hvalue
 // zadd key1 value1 score
 
-func NewCommandFromMsg(msg *protocol.Message) *Command {
+func NewCommandFromReceive(rec protocol.Receive) *Command {
 	c := new(Command)
-	for _, e := range msg.Elements {
+	for _, e := range rec {
 		if c.Command == "" {
-			c.Command = strings.ToLower(e.Value)
+			c.Command = strings.ToLower(e)
 			continue
 		}
 
-		c.Values = append(c.Values, e.Value)
+		c.Values = append(c.Values, e)
 	}
 
 	log.Println("command: ", c.Command)
@@ -37,10 +37,16 @@ func NewCommandFromMsg(msg *protocol.Message) *Command {
 
 // Execute only return rsp bytes
 // if got any error when execution will transfer protocol bytes
-func (c *Command) Execute(ctx context.Context) (rsp []byte) {
-	result, err := exec(c)
-	if err != nil {
-		return wrapError(err)
+func (c *Command) Execute(ctx context.Context) *protocol.Response {
+	f, ok := KnownCommands[c.Command]
+	if !ok {
+		return protocol.NewResponseWithError(ErrUnknownCommand)
 	}
-	return wrapResult(result)
+
+	rsp, err := f(c)
+	if err != nil {
+		return protocol.NewResponseWithError(err)
+	}
+
+	return rsp
 }

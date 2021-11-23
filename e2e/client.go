@@ -6,13 +6,13 @@ import (
 	"github.com/yusank/godis/protocol"
 )
 
-func connAndSendMsg(addr string, msg *protocol.Message) error {
+func connAndSendMsg(addr string, rsp *protocol.Response) error {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return err
 	}
 
-	n, err1 := conn.Write(msg.Bytes())
+	n, err1 := conn.Write(rsp.Encode())
 	if err1 != nil {
 		return err1
 	}

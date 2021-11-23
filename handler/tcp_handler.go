@@ -14,15 +14,13 @@ type MessageHandler struct{}
 
 func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
 	// io data to protocol msg
-	msg, err := protocol.NewMessageFromReader(r)
+	rec, err := protocol.DecodeFromReader(r)
 	if err != nil {
 		return nil, err
 	}
-	log.Println(msg)
+	log.Println(rec)
 
-	c := redis.NewCommandFromMsg(msg)
-	rsp := c.Execute(context.Background())
-
-	log.Println("rsp:", debug.Escape(string(rsp)))
-	return rsp, err
+	rsp := redis.NewCommandFromReceive(rec).Execute(context.Background())
+	log.Println("rsp:", debug.Escape(string(rsp.Encode())))
+	return rsp.Encode(), err
 }

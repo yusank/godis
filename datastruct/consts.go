@@ -17,4 +17,5 @@ const (
 var (
 	ErrNil                   = errors.New("redis: not found")
 	ErrKeyAndCommandNotMatch = errors.New("key type and command not match")
+	ErrNotInteger            = errors.New("value is not an integer or out of range")
 )

@@ -3,87 +3,91 @@ package protocol
 import (
 	"fmt"
 	"log"
-	"strconv"
+	"strings"
 
 	"github.com/yusank/godis/conn"
 )
 
 /*
- * put all messages and elements decode funtions
+ * put all  decode functions
  */
 
-func newSimpleStringElement(str string) *Element {
-	return &Element{
-		Description: DescriptionSimpleStrings,
-		Value:       str,
+// Receive 代表客户端请求来的数据
+// A client sends the Redis server a RESP Array consisting of just Bulk Strings.
+// 所以不考虑太多特殊情况
+type Receive []string
+
+func (r Receive) String() string {
+	sb := new(strings.Builder)
+
+	_, _ = sb.WriteString("[ ")
+	for i, e := range r {
+		_, _ = sb.WriteString(fmt.Sprintf("%v", e))
+		if i < len(r)-1 {
+			_, _ = sb.WriteString(", ")
+		}
 	}
+	_, _ = sb.WriteString(" ]")
+
+	return sb.String()
 }
 
-func newErrorElement(e string) *Element {
-	return &Element{
-		Description: DescriptionErrors,
-		Value:       e,
+func DecodeFromReader(r conn.Reader) (rec Receive, err error) {
+	rec = make([]string, 0)
+	b, err := r.ReadBytes('\n')
+	if err != nil {
+		log.Println("readBytes err:", err)
+		return nil, err
 	}
+
+	str, length, desc, err := decodeSingleLine(b)
+	if err != nil {
+		log.Println("init message err:", err)
+		return nil, err
+	}
+
+	if desc == DescriptionBulkStrings {
+		temp, err1 := readBulkStrings(r, length)
+		if err1 != nil {
+			log.Println("read bulk str err:", err1)
+			return nil, err1
+		}
+
+		rec = append(rec, string(temp))
+		return
+	}
+
+	if desc == descriptionArrays {
+		// won't sava array element
+		items, err1 := readArray(r, length)
+		if err1 != nil {
+			log.Println("read bulk str err:", err1)
+			return nil, err1
+		}
+
+		rec = append(rec, items...)
+		return
+	}
+
+	rec = append(rec, str)
+	return
+
 }
 
-func newBulkStringElement(str string) *Element {
-	return &Element{
-		Description: DescriptionBulkStrings,
-		Value:       str,
-	}
-}
-
-func newNilBulkStringElement() *Element {
-	return &Element{
-		Description: DescriptionBulkStrings,
-		Value:       "-1",
-	}
-}
-
-func newIntegerElement(is string) *Element {
-	return &Element{
-		Description: DescriptionIntegers,
-		Value:       is,
-	}
-}
-
-// only use when decode protocal data to msg won't store in elements slice
-func newArrayElement(ln int) *Element {
-	return &Element{
-		Description: descriptionArray,
-		Value:       strconv.Itoa(ln),
-		Len:         ln,
-	}
-}
-
-func initElementFromLine(line []byte) (e *Element, err error) {
-	if len(line) == 0 {
-		return nil, nil
-	}
-
+func decodeSingleLine(line []byte) (str string, length int, desc byte, err error) {
 	if len(line) < 3 {
-		return nil, fmt.Errorf("unsupported protocol")
+		return "", 0, 0, fmt.Errorf("unsupported protocol")
 	}
 
-	desc := line[0]
+	desc = line[0]
 	switch desc {
 	// bulk string
-	case DescriptionBulkStrings:
-		e = newBulkStringElement("")
-		e.Len = readBulkOrArrayLength(line)
-		if e.Len < 0 {
-			e = newNilBulkStringElement()
-		}
-	case DescriptionSimpleStrings:
-		e = newSimpleStringElement(string(line[1 : len(line)-CRLFLen]))
-	case DescriptionErrors:
-		e = newErrorElement(string(line[1 : len(line)-CRLFLen]))
-	case DescriptionIntegers:
-		e = newIntegerElement(string(line[1 : len(line)-CRLFLen]))
-	case descriptionArray:
-		e = newArrayElement(readBulkOrArrayLength(line))
+	case DescriptionBulkStrings, descriptionArrays:
+		length = readBulkOrArrayLength(line)
+	case DescriptionSimpleStrings, DescriptionErrors, DescriptionIntegers:
+		str = string(line[1 : len(line)-CRLFLen])
 	default:
-		return nil, fmt.Errorf("unsupport protocol: %s", string(desc))
+		return "", 0, 0, fmt.Errorf("unsupport protocol: %s", string(desc))
 	}
 
 	return
@@ -117,40 +121,40 @@ func readBulkStrings(r conn.Reader, ln int) (val []byte, err error) {
 	return
 }
 
-func readArray(r conn.Reader, ln int) ([]*Element, error) {
-	elements := []*Element{}
+func readArray(r conn.Reader, ln int) ([]string, error) {
+	var items []string
 	for i := 0; i < ln; i++ {
 		line, err := r.ReadBytes('\n')
 		if err != nil {
 			return nil, err
 		}
 
-		if line[0] == descriptionArray {
+		if line[0] == descriptionArrays {
 			sub, subErr := readArray(r, readBulkOrArrayLength(line))
 			if subErr != nil {
 				return nil, subErr
 			}
 
-			elements = append(elements, sub...)
+			items = append(items, sub...)
 		}
 
-		e, err := initElementFromLine(line)
+		str, length, desc, err := decodeSingleLine(line)
 		if err != nil {
 			return nil, err
 		}
 
-		if e.Description == DescriptionBulkStrings {
-			temp, err1 := readBulkStrings(r, e.Len)
+		if desc == DescriptionBulkStrings {
+			temp, err1 := readBulkStrings(r, length)
 			if err1 != nil {
 				log.Println("read bulk str err:", err1)
 				return nil, err1
 			}
 
-			e.Value = string(temp)
+			str = string(temp)
 		}
 
-		elements = append(elements, e)
+		items = append(items, str)
 	}
 
-	return elements, nil
+	return items, nil
 }
