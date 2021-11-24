@@ -31,7 +31,7 @@ func get(c *Command) (*protocol.Response, error) {
 	}
 
 	rsp := protocol.NewResponse()
-	rsp.AppendBulkStrings(val)
+	rsp.AppendBulkInterfaces(val)
 	return rsp, nil
 }
 
@@ -42,7 +42,7 @@ func mget(c *Command) (*protocol.Response, error) {
 
 	values := datastruct.MGet(c.Values...)
 	rsp := protocol.NewResponse(true)
-	rsp.AppendBulkStrings(values...)
+	rsp.AppendBulkInterfaces(values...)
 
 	return rsp, nil
 }

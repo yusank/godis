@@ -2,7 +2,10 @@ module github.com/yusank/godis
 
 go 1.17
 
-require github.com/stretchr/testify v1.7.0
+require (
+	github.com/stretchr/testify v1.7.0
+	github.com/yusank/glob v0.3.0
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

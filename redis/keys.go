@@ -1,0 +1,48 @@
+package redis
+
+import (
+	"github.com/yusank/godis/datastruct"
+	"github.com/yusank/godis/protocol"
+)
+
+// global commands like `keys`, `exists`
+
+func keys(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	values := datastruct.Keys(c.Values[0])
+	rsp := protocol.NewResponse(true)
+	rsp.AppendBulkStrings(values...)
+	return rsp, nil
+}
+
+func exists(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	found := datastruct.Exists(c.Values[0])
+	rsp := protocol.NewResponseWithInteger(0)
+	if found {
+		rsp = protocol.NewResponseWithInteger(1)
+	}
+
+	return rsp, nil
+}
+
+func keyType(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	kt, ok := datastruct.Type(c.Values[0])
+	if !ok {
+		rsp := protocol.NewResponseWithSimpleString(RespNone)
+		return rsp, nil
+	}
+
+	rsp := protocol.NewResponseWithSimpleString(string(kt))
+	return rsp, nil
+}

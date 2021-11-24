@@ -25,7 +25,7 @@ func Test_BulkString(t *testing.T) {
 	srv := startServer(debugAddr, t)
 
 	rsp := protocol.NewResponse()
-	rsp.AppendBulkStrings("GET")
+	rsp.AppendBulkInterfaces("GET")
 	err := connAndSendMsg(debugAddr, rsp)
 	assert.NoError(t, err)
 	srv.Stop()
@@ -35,7 +35,7 @@ func Test_Array(t *testing.T) {
 	srv := startServer(debugAddr, t)
 
 	rsp := protocol.NewResponse()
-	rsp.AppendBulkStrings("MEGT", "key1")
+	rsp.AppendBulkInterfaces("MEGT", "key1")
 	err := connAndSendMsg(debugAddr, rsp)
 	assert.NoError(t, err)
 	srv.Stop()

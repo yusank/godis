@@ -4,6 +4,8 @@ package datastruct
 
 import (
 	"sync"
+
+	"github.com/yusank/glob"
 )
 
 var defaultCache = newMemoryCache()
@@ -40,7 +42,15 @@ func Type(key string) (kt KeyType, found bool) {
 	return v.(*KeyInfo).Type, true
 }
 
-func Keys(pattern string) ([]string, error) {
-	// todo
-	return nil, nil
+func Keys(pattern string) (keys []string) {
+	g := glob.MustCompile(pattern)
+	defaultCache.keys.Range(func(k, _ interface{}) bool {
+		key := k.(string)
+		if g.Match(key) {
+			keys = append(keys, key)
+		}
+		return true
+	})
+
+	return
 }

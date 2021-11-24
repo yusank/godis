@@ -61,7 +61,16 @@ func NewResponseWithInteger(i int64) *Response {
 	return resp
 }
 
-func (r *Response) AppendBulkStrings(strSlice ...interface{}) {
+func (r *Response) AppendBulkInterfaces(slice ...interface{}) {
+	for _, v := range slice {
+		r.Items = append(r.Items, &ResponseItem{
+			Value: v,
+			Type:  TypeBulkStrings,
+		})
+	}
+}
+
+func (r *Response) AppendBulkStrings(strSlice ...string) {
 	for _, str := range strSlice {
 		r.Items = append(r.Items, &ResponseItem{
 			Value: str,

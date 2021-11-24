@@ -11,7 +11,7 @@ func defaultExecFunc(c *Command) (*protocol.Response, error) {
 	return protocol.NewResponseWithSimpleString(RespOK), nil
 }
 
-var KnownCommands = map[string]ExecuteFunc{
+var knownCommands = map[string]ExecuteFunc{
 	// native
 	"command": func(c *Command) (*protocol.Response, error) {
 		return protocol.NewResponseWithSimpleString(RespCommand), nil
@@ -19,6 +19,9 @@ var KnownCommands = map[string]ExecuteFunc{
 	"ping": func(c *Command) (*protocol.Response, error) {
 		return protocol.NewResponseWithSimpleString(RespPong), nil
 	},
+	"keys":   keys,
+	"exists": exists,
+	"type":   keyType,
 	// strings
 	"append": stringAppend,
 	"incr":   incr,

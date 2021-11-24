@@ -38,7 +38,7 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 // Execute only return rsp bytes
 // if got any error when execution will transfer protocol bytes
 func (c *Command) Execute(ctx context.Context) *protocol.Response {
-	f, ok := KnownCommands[c.Command]
+	f, ok := knownCommands[c.Command]
 	if !ok {
 		return protocol.NewResponseWithError(ErrUnknownCommand)
 	}

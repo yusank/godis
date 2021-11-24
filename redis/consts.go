@@ -9,6 +9,7 @@ var (
 
 var (
 	RespOK      = "OK"
+	RespNone    = "none"
 	RespPong    = "PONG"
 	RespCommand = "COMMAND"
 )
