@@ -41,11 +41,31 @@ func NewResponseWithSimpleString(str string) *Response {
 	return resp
 }
 
+func NewResponseWithBulkString(str string) *Response {
+	resp := NewResponse()
+	resp.Items = append(resp.Items, &ResponseItem{
+		Value: str,
+		Type:  TypeBulkStrings,
+	})
+
+	return resp
+}
+
 func NewResponseWithError(e error) *Response {
 	resp := NewResponse()
 	resp.Items = append(resp.Items, &ResponseItem{
 		Value: e,
 		Type:  TypeErrors,
+	})
+
+	return resp
+}
+
+func NewResponseWithNilBulk() *Response {
+	resp := NewResponse()
+	resp.Items = append(resp.Items, &ResponseItem{
+		Value: nil,
+		Type:  TypeBulkStrings,
 	})
 
 	return resp
