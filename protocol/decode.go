@@ -109,7 +109,7 @@ func readBulkOrArrayLength(line []byte) int {
 }
 
 func readBulkStrings(r conn.Reader, ln int) (val []byte, err error) {
-	if ln <= 0 {
+	if ln < 0 {
 		return
 	}
 

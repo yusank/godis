@@ -20,13 +20,13 @@ var KnownCommands = map[string]ExecuteFunc{
 		return protocol.NewResponseWithSimpleString(RespPong), nil
 	},
 	// strings
-	"append": defaultExecFunc,
-	//"incr":   incr,
-	//"incrby": incrBy,
-	//"decr":   decr,
-	//"decrby": decrBy,
-	"get":  get,
-	"mget": mget,
-	"set":  set,
+	"append": stringAppend,
+	"incr":   incr,
+	"incrby": incrBy,
+	"decr":   decr,
+	"decrby": decrBy,
+	"get":    get,
+	"mget":   mget,
+	"set":    set,
 	//... more
 }

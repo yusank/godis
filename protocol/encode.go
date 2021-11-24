@@ -19,10 +19,16 @@ type ResponseItem struct {
 	Type  ProtocolDataType
 }
 
-func NewResponse() *Response {
-	return &Response{
+func NewResponse(isArray ...bool) *Response {
+	rsp := &Response{
 		Items: make([]*ResponseItem, 0),
 	}
+
+	if len(isArray) > 0 && isArray[0] {
+		rsp.IsArray = true
+	}
+
+	return rsp
 }
 
 func NewResponseWithSimpleString(str string) *Response {
@@ -40,6 +46,16 @@ func NewResponseWithError(e error) *Response {
 	resp.Items = append(resp.Items, &ResponseItem{
 		Value: e,
 		Type:  TypeErrors,
+	})
+
+	return resp
+}
+
+func NewResponseWithInteger(i int64) *Response {
+	resp := NewResponse()
+	resp.Items = append(resp.Items, &ResponseItem{
+		Value: i,
+		Type:  TypeIntegers,
 	})
 
 	return resp

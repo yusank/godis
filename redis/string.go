@@ -41,22 +41,26 @@ func mget(c *Command) (*protocol.Response, error) {
 	}
 
 	values := datastruct.MGet(c.Values...)
-	rsp := protocol.NewResponse()
-	rsp.IsArray = true
+	rsp := protocol.NewResponse(true)
 	rsp.AppendBulkStrings(values...)
 
 	return rsp, nil
 }
 
-func incr(c *Command) (interface{}, error) {
+func incr(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
 		return nil, ErrCommandArgsNotEnough
 	}
 
-	return datastruct.IncrBy(c.Values[0], 1)
+	i64, err := datastruct.IncrBy(c.Values[0], 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(i64), nil
 }
 
-func incrBy(c *Command) (interface{}, error) {
+func incrBy(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {
 		return nil, ErrCommandArgsNotEnough
 	}
@@ -66,34 +70,54 @@ func incrBy(c *Command) (interface{}, error) {
 		return nil, datastruct.ErrNotInteger
 	}
 
-	return datastruct.IncrBy(c.Values[0], increment)
+	i64, err := datastruct.IncrBy(c.Values[0], increment)
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(i64), nil
 }
 
-func decr(c *Command) (interface{}, error) {
+func decr(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
 		return nil, ErrCommandArgsNotEnough
 	}
 
-	return datastruct.IncrBy(c.Values[0], -1)
+	i64, err := datastruct.IncrBy(c.Values[0], -1)
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(i64), nil
 }
 
-func decrBy(c *Command) (interface{}, error) {
+func decrBy(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {
 		return nil, ErrCommandArgsNotEnough
 	}
 
-	increment, err := strconv.ParseInt(c.Values[1], 10, 64)
+	decrement, err := strconv.ParseInt(c.Values[1], 10, 64)
 	if err != nil {
 		return nil, datastruct.ErrNotInteger
 	}
 
-	return datastruct.IncrBy(c.Values[0], -increment)
+	i64, err := datastruct.IncrBy(c.Values[0], -decrement)
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(i64), nil
 }
 
-func stringAppend(c *Command) (interface{}, error) {
+func stringAppend(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {
 		return nil, ErrCommandArgsNotEnough
 	}
 
-	return datastruct.Append(c.Values[0], c.Values[1])
+	i, err := datastruct.Append(c.Values[0], c.Values[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(int64(i)), nil
 }

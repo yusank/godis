@@ -1,5 +1,7 @@
 package datastruct
 
+// keys file put functions for key operation
+
 import (
 	"sync"
 )
@@ -28,6 +30,7 @@ func Exists(key string) bool {
 	_, ok := defaultCache.keys.Load(key)
 	return ok
 }
+
 func Type(key string) (kt KeyType, found bool) {
 	v, ok := defaultCache.keys.Load(key)
 	if !ok {
@@ -35,4 +38,9 @@ func Type(key string) (kt KeyType, found bool) {
 	}
 
 	return v.(*KeyInfo).Type, true
+}
+
+func Keys(pattern string) ([]string, error) {
+	// todo
+	return nil, nil
 }
