@@ -78,6 +78,36 @@ func (n *listNode) addToTail(val string) *listNode {
 	return node
 }
 
+func (l *List) removeHead() {
+	if l.head == nil {
+		return
+	}
+
+	l.length--
+	l.head = l.head.next
+	if l.head == nil {
+		l.tail = nil
+		return
+	}
+
+	l.head.prev = nil
+}
+
+func (l *List) removeTail() {
+	if l.tail == nil {
+		return
+	}
+
+	l.length--
+	l.tail = l.tail.prev
+	if l.tail == nil {
+		l.head = nil
+		return
+	}
+
+	l.tail.next = nil
+}
+
 func (l *List) LPush(val string) {
 	l.length++
 	if l.head != nil {
@@ -137,10 +167,6 @@ func (l *List) LRange(start, stop int) (values []string) {
 		return nil
 	}
 
-	if start > stop || start > l.length || stop < -l.length {
-		return nil
-	}
-
 	if start < 0 {
 		start = start + l.length
 		if start < 0 {
@@ -150,6 +176,10 @@ func (l *List) LRange(start, stop int) (values []string) {
 
 	if stop < 0 {
 		stop = stop + l.length
+	}
+
+	if start > stop || start > l.length || stop < 0 {
+		return nil
 	}
 
 	start = convertNegativeIndex(start, l.length)
@@ -183,6 +213,112 @@ func convertNegativeIndex(i int, ln int) int {
 	}
 
 	return i
+}
+
+// LRemAll .
+// count == 0 => remove all element equal value from head to tail
+// count > 0 => remove count element equal value from head to tail
+// count < 0 => remove count element equal value from tail to head
+
+// LRemCountFromHead n == l.length if remove all
+func (l *List) LRemCountFromHead(value string, n int) (cnt int) {
+	var (
+		dumbHead = &listNode{
+			next: l.head,
+		}
+		prev = dumbHead
+		cur  = l.head
+		next = l.head.next
+	)
+
+	for cur != nil && n > 0 {
+		if cur.value == value {
+			prev.next = next
+			if next != nil {
+				next.prev = prev
+			}
+			// drop  cur node
+			cur.prev, cur.next = nil, nil
+
+			cnt++
+			n--
+		} else {
+			// only  move when cur node not removed
+			prev = prev.next
+		}
+
+		cur = next
+		if next != nil {
+			next = next.next
+		}
+	}
+
+	// remove last element
+	if prev.next == nil {
+		l.tail = prev
+	}
+
+	l.head = dumbHead.next
+	if l.head != nil {
+		// if remove first element from, dumbHead.next.prev will be point to dumbHead
+		// // In other words, l.head.tail will be not nil
+		l.head.prev = nil
+	}
+	l.length -= cnt
+	return
+}
+
+// LRemCountFromTail n is positive for convenience
+func (l *List) LRemCountFromTail(value string, n int) (cnt int) {
+	var (
+		dumbTail = &listNode{
+			prev: l.tail,
+		}
+		prev = dumbTail
+		cur  = l.tail
+		next = l.tail.prev
+		// 1   2   3    4     5    dumTail
+		//              ^     ^      ^  <<-
+		//            next   cur    prev
+	)
+
+	// range from tail to head
+	for cur != nil && n > 0 {
+		if cur.value == value {
+			prev.prev = next
+			if next != nil {
+				next.next = prev
+			}
+			// drop  cur node
+			cur.prev, cur.next = nil, nil
+
+			cnt++
+			n--
+		} else {
+			// only  move when cur node not removed
+			prev = prev.prev
+		}
+
+		cur = next
+		if next != nil {
+			next = next.prev
+		}
+	}
+
+	// remove last(head) element
+	if prev.prev == nil {
+		l.head = prev
+	}
+
+	l.tail = dumbTail.prev
+	if l.tail != nil {
+		// if remove first element from tail, dumbTail.prev.next will be point to dumbTail
+		// In other words, l.tail.next will be not nil
+		l.tail.next = nil
+	}
+
+	l.length -= cnt
+	return
 }
 
 /*
@@ -314,4 +450,27 @@ func LRange(key string, start, stop int) (values []string, err error) {
 
 	values = list.LRange(start, stop)
 	return
+}
+
+// LRem Removes the first count occurrences of elements equal to element from the list stored at key
+func LRem(key string, count int, value string) (n int, err error) {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return 0, err
+	}
+
+	list := info.Value.(*List)
+	if list.length == 0 {
+		return 0, ErrNil
+	}
+
+	if count > 0 {
+		return list.LRemCountFromHead(value, count), nil
+	}
+
+	if count < 0 {
+		return list.LRemCountFromTail(value, -count), nil
+	}
+
+	return list.LRemCountFromHead(value, list.length), nil
 }

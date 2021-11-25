@@ -38,5 +38,6 @@ var knownCommands = map[string]ExecuteFunc{
 	"rpush":  rPush,
 	"rpop":   rPop,
 	"lrange": lRange,
+	"lrem":   lRem,
 	//... more
 }

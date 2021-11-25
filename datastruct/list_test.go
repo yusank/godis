@@ -83,6 +83,12 @@ func TestList_LRange(t *testing.T) {
 			want:  values[1:4],
 		},
 		{
+			name:  "range_all",
+			start: 0,
+			stop:  -1,
+			want:  values,
+		},
+		{
 			name:  "range_all_list",
 			start: 0,
 			stop:  len(values),
@@ -120,6 +126,166 @@ func TestList_LRange(t *testing.T) {
 			if !assert.Equal(t, tt.want, gotSlice) {
 				return
 			}
+		})
+	}
+}
+
+func TestList_LRemCountFromHead(t *testing.T) {
+	tests := []struct {
+		name     string
+		values   []string
+		remValue string
+		remCnt   int
+		wantNum  int
+		wantRes  []string
+	}{
+		{
+			name:     "rem_head",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "1",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"2", "3", "4", "5"},
+		},
+		{
+			name:     "rem_tail",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "5",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"1", "2", "3", "4"},
+		},
+		{
+			name:     "rem_from_one_element_list",
+			values:   []string{"1"},
+			remValue: "1",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  nil,
+		},
+		{
+			name:     "rem_from_middle",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"1", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_continuation",
+			values:   []string{"1", "2", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"1", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_not_continuation",
+			values:   []string{"1", "2", "3", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"1", "3", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_not_continuation",
+			values:   []string{"1", "1", "3", "1"},
+			remValue: "1",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"3", "1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			list := newListByRPush(tt.values...)
+			cnt := list.LRemCountFromHead(tt.remValue, tt.remCnt)
+			if !assert.Equal(t, tt.wantNum, cnt) {
+				return
+			}
+
+			assert.Equal(t, tt.wantRes, list.LRange(0, -1))
+		})
+	}
+}
+
+func TestList_LRemCountFromTail(t *testing.T) {
+	tests := []struct {
+		name     string
+		values   []string
+		remValue string
+		remCnt   int
+		wantNum  int
+		wantRes  []string
+	}{
+		{
+			name:     "rem_tail",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "5",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"1", "2", "3", "4"},
+		},
+		{
+			name:     "rem_head",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "1",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"2", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_one_element_list",
+			values:   []string{"1"},
+			remValue: "1",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  nil,
+		},
+		{
+			name:     "rem_from_middle",
+			values:   []string{"1", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   1,
+			wantNum:  1,
+			wantRes:  []string{"1", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_continuation",
+			values:   []string{"1", "2", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"1", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_not_continuation",
+			values:   []string{"1", "2", "3", "2", "3", "4", "5"},
+			remValue: "2",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"1", "3", "3", "4", "5"},
+		},
+		{
+			name:     "rem_from_middle_not_continuation",
+			values:   []string{"1", "1", "3", "1"},
+			remValue: "1",
+			remCnt:   2,
+			wantNum:  2,
+			wantRes:  []string{"1", "3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			list := newListByRPush(tt.values...)
+			cnt := list.LRemCountFromTail(tt.remValue, tt.remCnt)
+			if !assert.Equal(t, tt.wantNum, cnt) {
+				return
+			}
+
+			assert.Equal(t, tt.wantRes, list.LRange(0, -1))
 		})
 	}
 }

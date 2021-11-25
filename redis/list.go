@@ -145,3 +145,22 @@ func lRange(c *Command) (*protocol.Response, error) {
 	rsp.AppendBulkStrings(values...)
 	return rsp, nil
 }
+
+// lRem .
+func lRem(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	count, err := strconv.Atoi(c.Values[1])
+	if err != nil {
+		return nil, ErrValueOutOfRange
+	}
+
+	n, err := datastruct.LRem(c.Values[0], count, c.Values[2])
+	if err != nil && err != datastruct.ErrNil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(int64(n)), nil
+}
