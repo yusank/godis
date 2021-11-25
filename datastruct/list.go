@@ -132,6 +132,59 @@ func (l *List) RPop() (val string, ok bool) {
 	return val, true
 }
 
+func (l *List) LRange(start, stop int) (values []string) {
+	if l.head == nil {
+		return nil
+	}
+
+	if start > stop || start > l.length || stop < -l.length {
+		return nil
+	}
+
+	if start < 0 {
+		start = start + l.length
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	if stop < 0 {
+		stop = stop + l.length
+	}
+
+	start = convertNegativeIndex(start, l.length)
+	stop = convertNegativeIndex(stop, l.length)
+
+	var (
+		head = l.head
+		idx  int
+	)
+
+	for head != nil && idx <= stop {
+		if idx >= start {
+			values = append(values, head.value)
+		}
+
+		idx++
+		head = head.next
+	}
+
+	return
+}
+
+func convertNegativeIndex(i int, ln int) int {
+	if i >= 0 {
+		return i
+	}
+
+	i = ln + i
+	if i < 0 {
+		return 0
+	}
+
+	return i
+}
+
 /*
  * --- debug ---
  */
@@ -151,8 +204,8 @@ func (l *List) print() {
  */
 
 func LPush(key string, values ...string) (ln int, err error) {
-	v, ok := defaultCache.keys.Load(key)
-	if !ok {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err == ErrNil {
 		list := newListByLPush(values...)
 		defaultCache.keys.Store(key, &KeyInfo{
 			Type:  KeyTypeList,
@@ -162,9 +215,8 @@ func LPush(key string, values ...string) (ln int, err error) {
 		return list.length, nil
 	}
 
-	info := v.(*KeyInfo)
-	if info.Type != KeyTypeList {
-		return 0, ErrKeyAndCommandNotMatch
+	if err != nil {
+		return 0, err
 	}
 
 	list := info.Value.(*List)
@@ -175,29 +227,29 @@ func LPush(key string, values ...string) (ln int, err error) {
 	return list.length, nil
 }
 
-func LPop(key string) (value string, err error) {
-	v, ok := defaultCache.keys.Load(key)
-	if !ok {
-		return "", ErrNil
-	}
-
-	info := v.(*KeyInfo)
-	if info.Type != KeyTypeList {
-		return "", ErrKeyAndCommandNotMatch
+func LPop(key string, count int) (values []string, err error) {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return nil, err
 	}
 
 	list := info.Value.(*List)
-	value, ok = list.LPop()
-	if !ok {
-		return "", ErrNil
+	for count > 0 && list.length > 0 {
+		value, ok := list.LPop()
+		if !ok {
+			return
+		}
+
+		values = append(values, value)
+		count--
 	}
 
 	return
 }
 
 func RPush(key string, values ...string) (ln int, err error) {
-	v, ok := defaultCache.keys.Load(key)
-	if !ok {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err == ErrNil {
 		list := newListByRPush(values...)
 		defaultCache.keys.Store(key, &KeyInfo{
 			Type:  KeyTypeList,
@@ -207,9 +259,8 @@ func RPush(key string, values ...string) (ln int, err error) {
 		return list.length, nil
 	}
 
-	info := v.(*KeyInfo)
-	if info.Type != KeyTypeList {
-		return 0, ErrKeyAndCommandNotMatch
+	if err != nil {
+		return 0, err
 	}
 
 	list := info.Value.(*List)
@@ -220,36 +271,47 @@ func RPush(key string, values ...string) (ln int, err error) {
 	return list.length, nil
 }
 
-func RPop(key string) (value string, err error) {
-	v, ok := defaultCache.keys.Load(key)
-	if !ok {
-		return "", ErrNil
-	}
-
-	info := v.(*KeyInfo)
-	if info.Type != KeyTypeList {
-		return "", ErrKeyAndCommandNotMatch
+func RPop(key string, count int) (values []string, err error) {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return nil, err
 	}
 
 	list := info.Value.(*List)
-	value, ok = list.RPop()
-	if !ok {
-		return "", ErrNil
+	for count > 0 && list.length > 0 {
+		value, ok := list.RPop()
+		if !ok {
+			return
+		}
+
+		values = append(values, value)
+		count--
 	}
+
 	return
 }
 
 func LLen(key string) (ln int, err error) {
-	v, ok := defaultCache.keys.Load(key)
-	if !ok {
-		return 0, nil
-	}
-
-	info := v.(*KeyInfo)
-	if info.Type != KeyTypeList {
-		return 0, ErrKeyAndCommandNotMatch
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return 0, err
 	}
 
 	ln = info.Value.(*List).length
+	return
+}
+
+func LRange(key string, start, stop int) (values []string, err error) {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return nil, err
+	}
+
+	list := info.Value.(*List)
+	if list.length == 0 {
+		return nil, ErrNil
+	}
+
+	values = list.LRange(start, stop)
 	return
 }

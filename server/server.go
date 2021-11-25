@@ -34,6 +34,7 @@ func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
 }
 
 func (s *Server) Start() error {
+	defer conn.DestroyAllConn()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
@@ -57,6 +58,6 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() {
-	s.listener.Close()
+	_ = s.listener.Close()
 	s.cancel()
 }

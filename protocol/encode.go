@@ -62,12 +62,12 @@ func NewResponseWithError(e error) *Response {
 }
 
 func NewResponseWithNilBulk() *Response {
-	resp := NewResponse()
-	resp.Items = append(resp.Items, &ResponseItem{
-		Value: nil,
-		Type:  TypeBulkStrings,
-	})
+	resp := NewResponse(false)
+	return resp
+}
 
+func NewResponseWithEmptyArray() *Response {
+	resp := NewResponse(true)
 	return resp
 }
 
@@ -79,6 +79,10 @@ func NewResponseWithInteger(i int64) *Response {
 	})
 
 	return resp
+}
+
+func (r *Response) SetIsArray() {
+	r.IsArray = true
 }
 
 func (r *Response) AppendBulkInterfaces(slice ...interface{}) {
@@ -102,6 +106,11 @@ func (r *Response) AppendBulkStrings(strSlice ...string) {
 func (r *Response) Encode() []byte {
 	buf := new(bytes.Buffer)
 	if len(r.Items) == 0 {
+		// empty
+		if r.IsArray {
+			return []byte("*0\r\n")
+		}
+
 		return []byte("$-1\r\n")
 	}
 

@@ -25,6 +25,24 @@ type KeyInfo struct {
 }
 
 /*
+ * util functions
+ */
+
+func loadKeyInfo(key string, tp KeyType) (info *KeyInfo, err error) {
+	v, ok := defaultCache.keys.Load(key)
+	if !ok {
+		return nil, ErrNil
+	}
+
+	info = v.(*KeyInfo)
+	if info.Type != tp {
+		return nil, ErrKeyAndCommandNotMatch
+	}
+
+	return info, nil
+}
+
+/*
  * Common Command
  */
 
