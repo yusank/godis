@@ -289,3 +289,185 @@ func TestList_LRemCountFromTail(t *testing.T) {
 		})
 	}
 }
+
+func TestList_LIndex(t *testing.T) {
+	tests := []struct {
+		name   string
+		index  int
+		values []string
+		want   string
+		want1  bool
+	}{
+		{
+			name:   "head",
+			index:  0,
+			values: []string{"1", "2", "3", "4"},
+			want:   "1",
+			want1:  true,
+		},
+		{
+			name:   "tail",
+			index:  -1,
+			values: []string{"1", "2", "3", "4"},
+			want:   "4",
+			want1:  true,
+		},
+		{
+			name:   "mid",
+			index:  1,
+			values: []string{"1", "2", "3", "4"},
+			want:   "2",
+			want1:  true,
+		},
+		{
+			name:   "invalid_1",
+			index:  5,
+			values: []string{"1", "2", "3", "4"},
+			want:   "",
+			want1:  false,
+		},
+		{
+			name:   "invalid_2",
+			index:  -5,
+			values: []string{"1", "2", "3", "4"},
+			want:   "",
+			want1:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := newListByRPush(tt.values...)
+			got, got1 := l.LIndex(tt.index)
+			if !assert.Equal(t, tt.want, got) {
+				return
+			}
+
+			if !assert.Equal(t, tt.want1, got1) {
+				return
+			}
+		})
+	}
+}
+
+func TestList_LSet(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []string
+		index  int
+		value  string
+		want   bool
+	}{
+		{
+			name:   "head",
+			values: []string{"1", "2", "3"},
+			index:  0,
+			value:  "2",
+			want:   true,
+		},
+		{
+			name:   "tail",
+			values: []string{"1", "2", "3"},
+			index:  -1,
+			value:  "2",
+			want:   true,
+		},
+		{
+			name:   "mid",
+			values: []string{"1", "2", "3"},
+			index:  1,
+			value:  "1",
+			want:   true,
+		},
+		{
+			name:   "invalid",
+			values: []string{"1", "2", "3"},
+			index:  4,
+			value:  "2",
+			want:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := newListByRPush(tt.values...)
+			got := l.LSet(tt.index, tt.value)
+			if !assert.Equal(t, tt.want, got) || !got {
+				return
+			}
+			got1, _ := l.LIndex(tt.index)
+			assert.Equal(t, tt.value, got1)
+		})
+	}
+}
+
+func TestList_LInsert(t *testing.T) {
+	type args struct {
+		target   string
+		newValue string
+		flag     int
+	}
+	tests := []struct {
+		name   string
+		values []string
+		args   args
+		want   bool
+	}{
+		{
+			name:   "head",
+			values: []string{"2", "2", "3", "4"},
+			args: args{
+				target:   "2",
+				newValue: "1",
+				flag:     0,
+			},
+			want: true,
+		},
+		{
+			name:   "tail",
+			values: []string{"1", "2", "3", "4"},
+			args: args{
+				target:   "4",
+				newValue: "5",
+				flag:     0,
+			},
+			want: true,
+		},
+		{
+			name:   "after",
+			values: []string{"1", "3", "3", "4"},
+			args: args{
+				target:   "1",
+				newValue: "2",
+				flag:     1,
+			},
+			want: true,
+		},
+		{
+			name:   "before",
+			values: []string{"1", "2", "2", "4"},
+			args: args{
+				target:   "4",
+				newValue: "3",
+				flag:     -1,
+			},
+			want: true,
+		},
+		{
+			name:   "not_found",
+			values: []string{"1", "2", "3", "4"},
+			args: args{
+				target:   "-1",
+				newValue: "1",
+				flag:     -1,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := newListByRPush(tt.values...)
+			got := l.LInsert(tt.args.target, tt.args.newValue, tt.args.flag)
+			assert.Equal(t, tt.want, got)
+			l.print()
+		})
+	}
+}

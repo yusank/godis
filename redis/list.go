@@ -2,6 +2,7 @@ package redis
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/yusank/godis/datastruct"
 	"github.com/yusank/godis/protocol"
@@ -159,6 +160,72 @@ func lRem(c *Command) (*protocol.Response, error) {
 
 	n, err := datastruct.LRem(c.Values[0], count, c.Values[2])
 	if err != nil && err != datastruct.ErrNil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(int64(n)), nil
+}
+
+// lIndex .
+func lIndex(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 2 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	index, err := strconv.Atoi(c.Values[1])
+	if err != nil {
+		return nil, ErrValueOutOfRange
+	}
+
+	val, err := datastruct.LIndex(c.Values[1], index)
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithNilBulk(), nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithBulkString(val), nil
+}
+
+// lSet .
+func lSet(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	index, err := strconv.Atoi(c.Values[1])
+	if err != nil {
+		return nil, ErrValueOutOfRange
+	}
+
+	err = datastruct.LSet(c.Values[0], index, c.Values[2])
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithSimpleString(RespOK), nil
+}
+
+// lInsert .
+func lInsert(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 4 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var flag = 0
+	switch strings.ToLower(c.Values[1]) {
+	case "after":
+		flag = 1
+	case "before":
+		flag = -1
+	default:
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	n, err := datastruct.LInsert(c.Values[0], c.Values[2], c.Values[3], flag)
+	if err != nil {
 		return nil, err
 	}
 

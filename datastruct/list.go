@@ -1,7 +1,8 @@
 package datastruct
 
 import (
-	"log"
+	"fmt"
+	"strings"
 )
 
 type List struct {
@@ -321,23 +322,159 @@ func (l *List) LRemCountFromTail(value string, n int) (cnt int) {
 	return
 }
 
+func (l *List) lIndexNode(i int) *listNode {
+	if l.head == nil {
+		return nil
+	}
+
+	if i < 0 {
+		i += l.length
+	}
+
+	if i >= l.length || i < 0 {
+		return nil
+	}
+
+	var (
+		idx     int
+		cur     = l.head
+		reverse = i > l.length/2+1
+	)
+
+	if reverse {
+		idx = l.length - 1
+		cur = l.tail
+	}
+
+	for i != idx {
+		if reverse {
+			idx--
+			cur = cur.prev
+		} else {
+			idx++
+			cur = cur.next
+		}
+	}
+
+	return cur
+}
+
+func (l *List) LIndex(i int) (string, bool) {
+	node := l.lIndexNode(i)
+	if node == nil {
+		return "", false
+	}
+
+	return node.value, true
+}
+
+func (l *List) LSet(i int, val string) bool {
+	node := l.lIndexNode(i)
+	if node == nil {
+		return false
+	}
+
+	node.value = val
+	return true
+}
+
+func (l *List) LInsert(target, newValue string, flag int) bool {
+	if l.head == nil {
+		return false
+	}
+
+	node := l.findNode(target)
+	if node == nil {
+		return false
+	}
+
+	if flag == 0 {
+		node.value = newValue
+		return true
+	}
+
+	newNode := &listNode{value: newValue}
+	l.length++
+	// insert after
+	if flag > 0 {
+		next := node.next
+		node.next = newNode
+		newNode.prev = node
+		if next == nil {
+			l.tail = newNode
+		} else {
+			newNode.next = next
+			next.prev = newNode
+		}
+
+		return true
+	}
+
+	// insert before
+	prev := node.prev
+	node.prev = newNode
+	newNode.next = node
+	if prev == nil {
+		l.head = newNode
+	} else {
+		newNode.prev = prev
+		prev.next = newNode
+	}
+
+	return true
+}
+
+func (l *List) findNode(val string) *listNode {
+	var cur = l.head
+	for cur != nil {
+		if cur.value == val {
+			return cur
+		}
+		cur = cur.next
+	}
+
+	return nil
+}
+
 /*
  * --- debug ---
  */
 
 func (l *List) print() {
-	var temp = l.head
+	var (
+		sb   = new(strings.Builder)
+		temp = l.head
+	)
 
+	sb.WriteString("[")
 	for temp != nil {
-		log.Println(temp.value)
-
+		sb.WriteString(" " + temp.value)
 		temp = temp.next
+		if temp != nil {
+			sb.WriteString(",")
+		}
 	}
+	sb.WriteString(" ]")
+	fmt.Printf("len:%d, values: %s\n", l.length, sb.String())
 }
 
 /*
  * Commands
  */
+
+func loadAndCheckList(key string, checkLen bool) (*List, error) {
+	info, err := loadKeyInfo(key, KeyTypeList)
+	if err != nil {
+		return nil, err
+	}
+
+	list := info.Value.(*List)
+	if checkLen && list.length == 0 {
+		return nil, ErrNil
+	}
+
+	return list, nil
+}
 
 func LPush(key string, values ...string) (ln int, err error) {
 	info, err := loadKeyInfo(key, KeyTypeList)
@@ -408,12 +545,11 @@ func RPush(key string, values ...string) (ln int, err error) {
 }
 
 func RPop(key string, count int) (values []string, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, false)
 	if err != nil {
 		return nil, err
 	}
 
-	list := info.Value.(*List)
 	for count > 0 && list.length > 0 {
 		value, ok := list.RPop()
 		if !ok {
@@ -428,24 +564,19 @@ func RPop(key string, count int) (values []string, err error) {
 }
 
 func LLen(key string) (ln int, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, false)
 	if err != nil {
 		return 0, err
 	}
 
-	ln = info.Value.(*List).length
+	ln = list.length
 	return
 }
 
 func LRange(key string, start, stop int) (values []string, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, true)
 	if err != nil {
 		return nil, err
-	}
-
-	list := info.Value.(*List)
-	if list.length == 0 {
-		return nil, ErrNil
 	}
 
 	values = list.LRange(start, stop)
@@ -454,14 +585,9 @@ func LRange(key string, start, stop int) (values []string, err error) {
 
 // LRem Removes the first count occurrences of elements equal to element from the list stored at key
 func LRem(key string, count int, value string) (n int, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, true)
 	if err != nil {
 		return 0, err
-	}
-
-	list := info.Value.(*List)
-	if list.length == 0 {
-		return 0, ErrNil
 	}
 
 	if count > 0 {
@@ -473,4 +599,50 @@ func LRem(key string, count int, value string) (n int, err error) {
 	}
 
 	return list.LRemCountFromHead(value, list.length), nil
+}
+
+func LIndex(key string, index int) (value string, err error) {
+	list, err := loadAndCheckList(key, true)
+	if err != nil {
+		return "", err
+	}
+
+	value, ok := list.LIndex(index)
+	if !ok {
+		return "", ErrNil
+	}
+
+	return value, nil
+}
+
+func LSet(key string, index int, value string) error {
+	list, err := loadAndCheckList(key, true)
+	if err != nil {
+		return err
+	}
+
+	ok := list.LSet(index, value)
+	if !ok {
+		return ErrNil
+	}
+
+	return nil
+}
+
+// LInsert insert newValue into list
+// if flag == 0 then replace target
+// if flag > 0 insert newValue after target
+// if flag < 0 insert newValue before target
+// n is new length of list after insert
+func LInsert(key, target, newValue string, pos int) (n int, err error) {
+	list, err := loadAndCheckList(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	if !list.LInsert(target, newValue, pos) {
+		return 0, ErrNil
+	}
+
+	return list.length, nil
 }

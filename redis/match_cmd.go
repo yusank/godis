@@ -32,12 +32,15 @@ var knownCommands = map[string]ExecuteFunc{
 	"mget":   mget,
 	"set":    set,
 	// list
-	"lpush":  lPush,
-	"lpop":   lPop,
-	"llen":   lLen,
-	"rpush":  rPush,
-	"rpop":   rPop,
-	"lrange": lRange,
-	"lrem":   lRem,
+	"lpush":   lPush,
+	"lpop":    lPop,
+	"llen":    lLen,
+	"rpush":   rPush,
+	"rpop":    rPop,
+	"lrange":  lRange,
+	"lrem":    lRem,
+	"lindex":  lInsert,
+	"lset":    lSet,
+	"linsert": lInsert,
 	//... more
 }
