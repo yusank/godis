@@ -1,7 +1,7 @@
 package datastruct
 
 import (
-	"log"
+	"fmt"
 	"math/rand"
 	"time"
 )
@@ -31,17 +31,31 @@ func init() {
 }
 
 const (
-	ZSkipListMaxLevel = 1 << 5
+	ZSkipListMaxLevel = 1 << 5 // enough for 2^64 elements
+	ZSkipListP        = 4      // 随机因子
 )
 
-// todo when create skip list should init head of list with full level
+func newZSkipList() *zSkipList {
+	zsl := &zSkipList{
+		level: 1,
+		head:  newZslNode(ZSkipListMaxLevel, 0, ""),
+	}
+
+	return zsl
+}
 
 func newZslNode(level int, score float64, value string) *zSkipListNode {
-	return &zSkipListNode{
+	node := &zSkipListNode{
 		value:  value,
 		score:  score,
 		levels: make([]*zSkipListLeve, level),
 	}
+
+	for i := 0; i < level; i++ {
+		node.levels[i] = &zSkipListLeve{}
+	}
+
+	return node
 }
 
 func (zsl *zSkipList) insert(score float64, value string) *zSkipListNode {
@@ -107,12 +121,49 @@ func (zsl *zSkipList) insert(score float64, value string) *zSkipListNode {
 func (zsl *zSkipList) print() {
 	cur := zsl.head
 	for cur != nil {
-		log.Println(cur.score, cur.value, len(cur.levels))
+		fmt.Printf("score:%-2.0f, value:%-10s, height:%-2d\n", cur.score, cur.value, len(cur.levels))
+		if len(cur.levels) > 0 {
+			cur = cur.levels[0].forward
+		} else {
+			cur = nil
+		}
 	}
 }
 
 func zslRandomLevel() int {
-	return rand.Intn(ZSkipListMaxLevel) + 1
+	var (
+		level = 1
+		n     = 1 << 16
+	)
+	/* 这里从 Redis 源码借鉴过来
+	* 源码: (random()&0xFFFF) < (ZSKIPLIST_P * 0xFFFF) // ZSKIPLIST_P=0.25
+	* 通过该算法,返回的随机 level ,更接近于较低的数值,通过连续运行 10w 次后每个 level 返回的次数
+	* 0 0
+	* 1 50251
+	* 2 24927
+	* 3 12424
+	* 4 6129
+	* 5 3171
+	* 6 1588
+	* 7 774
+	* 8 388
+	* 9 181
+	* 10 83
+	* 11 41
+	* 12 15
+	* 13 10
+	* 14 10
+	* 15 5
+	* 16 1
+	 */
+	for rand.Int()&n < n/ZSkipListP {
+		level++
+	}
+
+	if level < ZSkipListMaxLevel {
+		return level
+	}
+	return ZSkipListMaxLevel
 }
 
 func tripleOp(cond bool, trueVal, falseVal uint) uint {
