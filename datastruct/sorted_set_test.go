@@ -12,6 +12,7 @@ func Test_zSkipList_insert(t *testing.T) {
 	zsl.insert(20, "clang")
 	zsl.insert(2, "java")
 	zsl.insert(8, "javascript")
+	zsl.insert(1, "clang")
 	zsl.print()
 }
 
