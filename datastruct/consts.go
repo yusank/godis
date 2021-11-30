@@ -22,7 +22,8 @@ var (
 
 // zAdd flags
 const (
-	ZAddInIncr = 1 << iota
+	ZAddInNone = 0
+	ZAddInIncr = 1 << (iota - 1)
 	ZAddInNx
 	ZAddInXx
 )

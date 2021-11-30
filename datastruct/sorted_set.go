@@ -11,7 +11,9 @@ import (
 
 // zSet is object contain skip list and map which store key-value pair
 type zSet struct {
-	m   sync.Map   // store key and value
+	m sync.Map // store key and value
+	// 在元素少于 100 & 每个元素大小小于 64 的时候,Redis 实际上用的是 zipList 这里作为知识点提了一下
+	// 	除非遇到性能问题,否则不准备同时支持 zipList 和 skipList
 	zsl *zSkipList // skip list
 }
 
@@ -265,6 +267,27 @@ func (zsl *zSkipList) delete(score float64, value string, node **zSkipListNode) 
 	return 0
 }
 
+// make sure there match an element in the skip list
+func (zsl *zSkipList) rank(score float64, value string) uint {
+	var rank uint
+	x := zsl.head
+LevelLoop:
+	for i := zsl.level - 1; i >= 0; i-- {
+		for x.levels[i].forward != nil &&
+			(x.levels[i].forward.score < score ||
+				(x.levels[i].forward.score == score &&
+					(x.levels[i].forward.value <= value))) {
+			rank += x.levels[i].span
+			x = x.levels[i].forward
+			if x.score == score && x.value == value {
+				break LevelLoop
+			}
+		}
+	}
+
+	return rank
+}
+
 func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	de := zs.findFromMap(value)
 	if de == nil {
@@ -302,15 +325,6 @@ func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	}
 
 	return 0
-}
-
-func (zs *zSet) score(value string) *float64 {
-	de := zs.findFromMap(value)
-	if de == nil {
-		return nil
-	}
-
-	return de.value.(*float64)
 }
 
 func (zs *zSet) findFromMap(key string) *dictEntry {
@@ -368,15 +382,30 @@ func ZAdd(key string, members []*ZSetMember, flag int) (int, error) {
 }
 
 func ZScore(key, value string) (float64, error) {
-	zs, err := loadAndCheckZSet(key, false)
+	zs, err := loadAndCheckZSet(key, true)
 	if err != nil {
 		return 0, err
 	}
 
-	score := zs.score(value)
-	if score == nil {
+	de := zs.findFromMap(value)
+	if de == nil {
 		return 0, ErrNil
 	}
 
-	return *score, nil
+	return *(de.value.(*float64)), nil
+}
+
+func ZRank(key, value string) (uint, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	de := zs.findFromMap(value)
+	if de == nil {
+		return 0, ErrNil
+	}
+
+	score := *(de.value.(*float64))
+	return zs.zsl.rank(score, value), nil
 }

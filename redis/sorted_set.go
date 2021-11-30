@@ -71,3 +71,21 @@ func zScore(c *Command) (*protocol.Response, error) {
 
 	return protocol.NewResponseWithBulkString(strconv.FormatFloat(f, 'g', -1, 64)), nil
 }
+
+// zRank .
+func zRank(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 2 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	rank, err := datastruct.ZRank(c.Values[0], c.Values[1])
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithNilBulk(), nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithInteger(int64(rank)), nil
+}

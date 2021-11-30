@@ -2,18 +2,26 @@ package datastruct
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_zSkipList_insert(t *testing.T) {
-	zsl := newZSkipList()
-	zsl.insert(10, "hello")
-	zsl.insert(5, "world")
-	zsl.insert(12, "golang")
-	zsl.insert(20, "clang")
-	zsl.insert(2, "java")
-	zsl.insert(8, "javascript")
-	zsl.insert(1, "clang")
-	zsl.print()
+	zs := prepareZSetForTest()
+	zs.zsl.print()
+}
+
+func prepareZSetForTest() *zSet {
+	zs := newZSet()
+	zs.zAdd(10, "hello", ZAddInNone)
+	zs.zAdd(5, "world", ZAddInNone)
+	zs.zAdd(12, "golang", ZAddInNone)
+	zs.zAdd(20, "clang", ZAddInNone)
+	zs.zAdd(2, "java", ZAddInNone)
+	zs.zAdd(8, "javascript", ZAddInNone)
+	zs.zAdd(1, "clang", ZAddInNone)
+
+	return zs
 }
 
 /*
@@ -45,4 +53,73 @@ func Benchmark_zslRandomLevel(b *testing.B) {
 	* Benchmark_zslRandomLevel
 	* Benchmark_zslRandomLevel-12    	43659864	        27.17 ns/op
 	 */
+}
+
+func Test_zSkipList_rank(t *testing.T) {
+	type args struct {
+		score float64
+		value string
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "c",
+			args: args{
+				score: 1,
+				value: "clang",
+			},
+			want: 1,
+		},
+		{
+			name: "java",
+			args: args{
+				score: 2,
+				value: "java",
+			},
+			want: 2,
+		},
+		{
+			name: "w",
+			args: args{
+				score: 5,
+				value: "world",
+			},
+			want: 3,
+		},
+		{
+			name: "js",
+			args: args{
+				score: 8,
+				value: "javascript",
+			},
+			want: 4,
+		},
+		{
+			name: "h",
+			args: args{
+				score: 10,
+				value: "hello",
+			},
+			want: 5,
+		},
+		{
+			name: "go",
+			args: args{
+				score: 12,
+				value: "golang",
+			},
+			want: 6,
+		},
+	}
+	zs := prepareZSetForTest()
+	zs.zsl.print()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := zs.zsl.rank(tt.args.score, tt.args.value)
+			assert.Equal(t, tt.want, int(got))
+		})
+	}
 }

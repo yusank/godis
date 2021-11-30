@@ -46,4 +46,5 @@ var knownCommands = map[string]ExecuteFunc{
 	// zset
 	"zadd":   zAdd,
 	"zscore": zScore,
+	"zrank":  zRank,
 }
