@@ -111,4 +111,6 @@ func DestroyAllConn() {
 		_ = conn.Close()
 		return true
 	})
+	// clear it
+	defConnPool.pool = sync.Map{}
 }
