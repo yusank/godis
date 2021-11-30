@@ -15,6 +15,13 @@ type zSet struct {
 	zsl *zSkipList // skip list
 }
 
+func newZSet() *zSet {
+	return &zSet{
+		m:   sync.Map{},
+		zsl: newZSkipList(),
+	}
+}
+
 type zSkipList struct {
 	head, tail *zSkipListNode
 	length     uint // 总长度
@@ -39,7 +46,6 @@ func init() {
 
 const (
 	ZSkipListMaxLevel = 1 << 5 // enough for 2^64 elements
-	ZSkipListP        = 4      // 随机因子
 )
 
 func newZSkipList() *zSkipList {
@@ -262,6 +268,11 @@ func (zsl *zSkipList) delete(score float64, value string, node **zSkipListNode) 
 func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	de := zs.findFromMap(value)
 	if de == nil {
+		// xx flag
+		if flag&ZAddInXx != 0 {
+			return 0
+		}
+
 		node := zs.zsl.insert(score, value)
 		zs.m.Store(value, withValue(&node.score))
 		return 1
@@ -291,6 +302,15 @@ func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	}
 
 	return 0
+}
+
+func (zs *zSet) score(value string) *float64 {
+	de := zs.findFromMap(value)
+	if de == nil {
+		return nil
+	}
+
+	return de.value.(*float64)
 }
 
 func (zs *zSet) findFromMap(key string) *dictEntry {
@@ -327,13 +347,36 @@ type ZSetMember struct {
 
 func ZAdd(key string, members []*ZSetMember, flag int) (int, error) {
 	zs, err := loadAndCheckZSet(key, false)
+	if err != nil && err != ErrNil {
+		return 0, err
+	}
+
+	if zs == nil {
+		zs = newZSet()
+		defaultCache.keys.Store(key, &KeyInfo{
+			Type:  KeyTypeSortedSet,
+			Value: zs,
+		})
+	}
+
+	var cnt int
+	for _, m := range members {
+		cnt += zs.zAdd(m.Score, m.Value, flag)
+	}
+
+	return cnt, nil
+}
+
+func ZScore(key, value string) (float64, error) {
+	zs, err := loadAndCheckZSet(key, false)
 	if err != nil {
 		return 0, err
 	}
 
-	for _, m := range members {
-		zs.zAdd(m.Score, m.Value, flag)
+	score := zs.score(value)
+	if score == nil {
+		return 0, ErrNil
 	}
 
-	return 0, nil
+	return *score, nil
 }

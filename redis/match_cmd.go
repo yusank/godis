@@ -43,4 +43,7 @@ var knownCommands = map[string]ExecuteFunc{
 	"lset":    lSet,
 	"linsert": lInsert,
 	//... more
+	// zset
+	"zadd":   zAdd,
+	"zscore": zScore,
 }

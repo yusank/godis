@@ -24,4 +24,5 @@ var (
 const (
 	ZAddInIncr = 1 << iota
 	ZAddInNx
+	ZAddInXx
 )
