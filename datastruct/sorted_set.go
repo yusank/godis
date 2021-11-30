@@ -3,10 +3,17 @@ package datastruct
 import (
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 )
 
 // sortedSet implement via skip list
+
+// zSet is object contain skip list and map which store key-value pair
+type zSet struct {
+	m   sync.Map   // store key and value
+	zsl *zSkipList // skip list
+}
 
 type zSkipList struct {
 	head, tail *zSkipListNode
@@ -74,30 +81,13 @@ func newZslNode(level int, score float64, value string) *zSkipListNode {
 func zslRandomLevel() int {
 	var (
 		level = 1
-		n     = 1 << 16
 	)
-	/* 这里从 Redis 源码借鉴过来
-	* 源码: (random()&0xFFFF) < (ZSKIPLIST_P * 0xFFFF) // ZSKIPLIST_P=0.25
-	* 通过该算法,返回的随机 level ,更接近于较低的数值,通过连续运行 10w 次后每个 level 返回的次数
-	* 0 0
-	* 1 50251
-	* 2 24927
-	* 3 12424
-	* 4 6129
-	* 5 3171
-	* 6 1588
-	* 7 774
-	* 8 388
-	* 9 181
-	* 10 83
-	* 11 41
-	* 12 15
-	* 13 10
-	* 14 10
-	* 15 5
-	* 16 1
+	/* 随机的同时降低更高的level 的出现,怎么做呢?
+	* Redis源码: (random()&0xFFFF) < (0.25 * 0xFFFF)
+	* 这里的实现如下,原理是,随机一个数,其为偶数的概率 50%,连续两次偶数概率为 25%,以此类推
+	* 连续次数越高概率越低,从而保证 level 更多的分布于低位level
 	 */
-	for rand.Int()&n < n/ZSkipListP {
+	for rand.Int()%2 == 0 {
 		level++
 	}
 
@@ -176,7 +166,7 @@ func (zsl *zSkipList) insert(score float64, value string) *zSkipListNode {
 }
 
 // return 1 if found and update element,otherwise return 0
-func (zsl *zSkipList) updateScore(curScore, newScore float64, value string) int {
+func (zsl *zSkipList) updateScore(curScore, newScore float64, value string) *zSkipListNode {
 	var update = make([]*zSkipListNode, ZSkipListMaxLevel)
 
 	// find where the match element
@@ -193,7 +183,7 @@ func (zsl *zSkipList) updateScore(curScore, newScore float64, value string) int 
 
 	x = x.levels[0].forward
 	if x == nil || x.score != curScore || x.value != value {
-		return 0
+		return nil
 	}
 
 	// if after update score, no need to change node position
@@ -201,14 +191,13 @@ func (zsl *zSkipList) updateScore(curScore, newScore float64, value string) int 
 	if (x.backward == nil || x.backward.score < newScore) &&
 		(x.levels[0].forward == nil || x.levels[0].forward.score > newScore) {
 		x.score = newScore
-		return 1
+		return x
 	}
 
 	// del and insert
 	zsl.deleteNode(x, update)
-	zsl.insert(newScore, value)
-	// todo free x
-	return 1
+	newNode := zsl.insert(newScore, value)
+	return newNode
 }
 
 func (zsl *zSkipList) deleteNode(node *zSkipListNode, update []*zSkipListNode) {
@@ -239,6 +228,7 @@ func (zsl *zSkipList) deleteNode(node *zSkipListNode, update []*zSkipListNode) {
 }
 
 // delete an element with matching by score and value
+//  if node is not nil then assign the deleted element to node
 func (zsl *zSkipList) delete(score float64, value string, node **zSkipListNode) int {
 	// match
 	var update = make([]*zSkipListNode, ZSkipListMaxLevel)
@@ -259,9 +249,7 @@ func (zsl *zSkipList) delete(score float64, value string, node **zSkipListNode) 
 	x = x.levels[0].forward
 	if x != nil && x.score == score && x.value == value {
 		zsl.deleteNode(x, update)
-		if node == nil {
-			// todo should free x
-		} else {
+		if node != nil {
 			*node = x
 		}
 
@@ -271,22 +259,65 @@ func (zsl *zSkipList) delete(score float64, value string, node **zSkipListNode) 
 	return 0
 }
 
+func (zs *zSet) zAdd(score float64, value string, flag int) int {
+	de := zs.findFromMap(value)
+	if de == nil {
+		node := zs.zsl.insert(score, value)
+		zs.m.Store(value, withValue(&node.score))
+		return 1
+	}
+
+	// nx flag
+	if flag&ZAddInNx != 0 {
+		// exist
+		return 0
+	}
+
+	// exists
+	oldScore := *(de.getValue().(*float64))
+	if flag&ZAddInIncr != 0 {
+		score += oldScore
+	}
+
+	if score != oldScore {
+		node := zs.zsl.updateScore(oldScore, score, value)
+		if node == nil {
+			return 0
+		}
+
+		// update score
+		de.setValue(&node.score)
+		return 1
+	}
+
+	return 0
+}
+
+func (zs *zSet) findFromMap(key string) *dictEntry {
+	v, ok := zs.m.Load(key)
+	if !ok {
+		return nil
+	}
+
+	return v.(*dictEntry)
+}
+
 /*
  * Commands
  */
 
-func loadAndCheckZsl(key string, checkLen bool) (*zSkipList, error) {
+func loadAndCheckZSet(key string, checkLen bool) (*zSet, error) {
 	info, err := loadKeyInfo(key, KeyTypeSortedSet)
 	if err != nil {
 		return nil, err
 	}
 
-	zsl := info.Value.(*zSkipList)
-	if checkLen && zsl.length == 0 {
+	zs := info.Value.(*zSet)
+	if checkLen && zs.zsl.length == 0 {
 		return nil, ErrNil
 	}
 
-	return zsl, nil
+	return zs, nil
 }
 
 type ZSetMember struct {
@@ -294,6 +325,15 @@ type ZSetMember struct {
 	Value string
 }
 
-func ZAdd(key string, members []*ZSetMember, options ...string) (int, error) {
+func ZAdd(key string, members []*ZSetMember, flag int) (int, error) {
+	zs, err := loadAndCheckZSet(key, false)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, m := range members {
+		zs.zAdd(m.Score, m.Value, flag)
+	}
+
 	return 0, nil
 }
