@@ -41,6 +41,16 @@ func NewResponseWithSimpleString(str string) *Response {
 	return resp
 }
 
+func NewResponseWithBulkString(str string) *Response {
+	resp := NewResponse()
+	resp.Items = append(resp.Items, &ResponseItem{
+		Value: str,
+		Type:  TypeBulkStrings,
+	})
+
+	return resp
+}
+
 func NewResponseWithError(e error) *Response {
 	resp := NewResponse()
 	resp.Items = append(resp.Items, &ResponseItem{
@@ -48,6 +58,16 @@ func NewResponseWithError(e error) *Response {
 		Type:  TypeErrors,
 	})
 
+	return resp
+}
+
+func NewResponseWithNilBulk() *Response {
+	resp := NewResponse(false)
+	return resp
+}
+
+func NewResponseWithEmptyArray() *Response {
+	resp := NewResponse(true)
 	return resp
 }
 
@@ -61,7 +81,20 @@ func NewResponseWithInteger(i int64) *Response {
 	return resp
 }
 
-func (r *Response) AppendBulkStrings(strSlice ...interface{}) {
+func (r *Response) SetIsArray() {
+	r.IsArray = true
+}
+
+func (r *Response) AppendBulkInterfaces(slice ...interface{}) {
+	for _, v := range slice {
+		r.Items = append(r.Items, &ResponseItem{
+			Value: v,
+			Type:  TypeBulkStrings,
+		})
+	}
+}
+
+func (r *Response) AppendBulkStrings(strSlice ...string) {
 	for _, str := range strSlice {
 		r.Items = append(r.Items, &ResponseItem{
 			Value: str,
@@ -73,6 +106,11 @@ func (r *Response) AppendBulkStrings(strSlice ...interface{}) {
 func (r *Response) Encode() []byte {
 	buf := new(bytes.Buffer)
 	if len(r.Items) == 0 {
+		// empty
+		if r.IsArray {
+			return []byte("*0\r\n")
+		}
+
 		return []byte("$-1\r\n")
 	}
 

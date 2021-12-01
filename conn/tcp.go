@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 func Listen(ctx context.Context, address string, h Handler) (l net.Listener, err error) {
@@ -15,11 +16,11 @@ func Listen(ctx context.Context, address string, h Handler) (l net.Listener, err
 	}
 
 	log.Println("start listen ", address)
-	go handleListner(ctx, l, h)
+	go handleListener(ctx, l, h)
 	return
 }
 
-func handleListner(ctx context.Context, l net.Listener, h Handler) {
+func handleListener(ctx context.Context, l net.Listener, h Handler) {
 	defer l.Close()
 	for {
 		select {
@@ -40,7 +41,9 @@ func handleListner(ctx context.Context, l net.Listener, h Handler) {
 
 // handle by a new goroutine
 func handle(ctx context.Context, conn net.Conn, h Handler) {
-	defer conn.Close()
+	addConn(conn)
+	defer destroyConn(conn)
+
 	reader := bufio.NewReader(conn)
 	for {
 		select {
@@ -67,4 +70,47 @@ func handle(ctx context.Context, conn net.Conn, h Handler) {
 			}
 		}
 	}
+}
+
+var defConnPool = newConnPool()
+
+type connPool struct {
+	pool sync.Map
+}
+
+func newConnPool() *connPool {
+	return &connPool{pool: sync.Map{}}
+}
+
+func addConn(conn net.Conn) {
+	addr := conn.RemoteAddr().String()
+	v, load := defConnPool.pool.LoadOrStore(addr, conn)
+	if load {
+		old := v.(net.Conn)
+		_ = old.Close()
+		defConnPool.pool.Store(addr, conn)
+	}
+
+	return
+}
+
+func destroyConn(conn net.Conn) {
+	addr := conn.RemoteAddr().String()
+	v, load := defConnPool.pool.LoadAndDelete(addr)
+	if load {
+		old := v.(net.Conn)
+		_ = old.Close()
+	}
+
+	_ = conn.Close()
+}
+
+func DestroyAllConn() {
+	defConnPool.pool.Range(func(key, value interface{}) bool {
+		conn := value.(net.Conn)
+		_ = conn.Close()
+		return true
+	})
+	// clear it
+	defConnPool.pool = sync.Map{}
 }

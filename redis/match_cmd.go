@@ -7,11 +7,7 @@ import (
 // ExecuteFunc define command execute, returns slice of string as result and error if has any error occur .
 type ExecuteFunc func(*Command) (*protocol.Response, error)
 
-func defaultExecFunc(c *Command) (*protocol.Response, error) {
-	return protocol.NewResponseWithSimpleString(RespOK), nil
-}
-
-var KnownCommands = map[string]ExecuteFunc{
+var knownCommands = map[string]ExecuteFunc{
 	// native
 	"command": func(c *Command) (*protocol.Response, error) {
 		return protocol.NewResponseWithSimpleString(RespCommand), nil
@@ -19,6 +15,9 @@ var KnownCommands = map[string]ExecuteFunc{
 	"ping": func(c *Command) (*protocol.Response, error) {
 		return protocol.NewResponseWithSimpleString(RespPong), nil
 	},
+	"keys":   keys,
+	"exists": exists,
+	"type":   keyType,
 	// strings
 	"append": stringAppend,
 	"incr":   incr,
@@ -28,5 +27,24 @@ var KnownCommands = map[string]ExecuteFunc{
 	"get":    get,
 	"mget":   mget,
 	"set":    set,
+	// list
+	"lpush":   lPush,
+	"lpop":    lPop,
+	"llen":    lLen,
+	"rpush":   rPush,
+	"rpop":    rPop,
+	"lrange":  lRange,
+	"lrem":    lRem,
+	"lindex":  lInsert,
+	"lset":    lSet,
+	"linsert": lInsert,
 	//... more
+	// zset
+	"zadd":   zAdd,
+	"zscore": zScore,
+	"zrank":  zRank,
+	"zrem":   zRem,
+	"zcard":  zCard,
+	"zcount": zCount,
+	"zincr":  zIncr,
 }

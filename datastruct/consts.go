@@ -19,3 +19,11 @@ var (
 	ErrKeyAndCommandNotMatch = errors.New("key type and command not match")
 	ErrNotInteger            = errors.New("value is not an integer or out of range")
 )
+
+// zAdd flags
+const (
+	ZAddInNone = 0
+	ZAddInIncr = 1 << (iota - 1)
+	ZAddInNx
+	ZAddInXx
+)
