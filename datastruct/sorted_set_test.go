@@ -1,6 +1,7 @@
 package datastruct
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,6 +121,111 @@ func Test_zSkipList_rank(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := zs.zsl.rank(tt.args.score, tt.args.value)
 			assert.Equal(t, tt.want, int(got))
+		})
+	}
+}
+
+func Test_zSkipList_count(t *testing.T) {
+
+	type args struct {
+		min     float64
+		minOpen bool
+		max     float64
+		maxOpen bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want uint
+	}{
+		{
+			name: "both_close",
+			args: args{
+				min:     0,
+				minOpen: false,
+				max:     6,
+				maxOpen: false,
+			},
+			want: 3,
+		},
+		{
+			name: "single_1",
+			args: args{
+				min:     1,
+				minOpen: true,
+				max:     2,
+				maxOpen: false,
+			},
+			want: 1,
+		},
+		{
+			name: "single_1",
+			args: args{
+				min:     1,
+				minOpen: false,
+				max:     2,
+				maxOpen: true,
+			},
+			want: 1,
+		},
+		{
+			name: "left_open",
+			args: args{
+				min:     1,
+				minOpen: true,
+				max:     10,
+				maxOpen: false,
+			},
+			want: 4,
+		},
+		{
+			name: "right_open",
+			args: args{
+				min:     1,
+				minOpen: false,
+				max:     7,
+				maxOpen: true,
+			},
+			want: 3,
+		},
+		{
+			name: "left_inf",
+			args: args{
+				min:     math.Inf(-1),
+				minOpen: false,
+				max:     10,
+				maxOpen: false,
+			},
+			want: 5,
+		},
+		{
+			name: "right_inf",
+			args: args{
+				min:     5,
+				minOpen: false,
+				max:     math.Inf(1),
+				maxOpen: false,
+			},
+			want: 4,
+		},
+		{
+			name: "both_inf",
+			args: args{
+				min:     math.Inf(-1),
+				minOpen: false,
+				max:     math.Inf(1),
+				maxOpen: false,
+			},
+			want: 6,
+		},
+	}
+
+	zs := prepareZSetForTest()
+	zs.zsl.print()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := zs.zsl.count(tt.args.min, tt.args.minOpen, tt.args.max, tt.args.maxOpen)
+			assert.Equal(t, int(tt.want), int(got))
 		})
 	}
 }

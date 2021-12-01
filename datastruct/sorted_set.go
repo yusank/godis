@@ -2,6 +2,7 @@ package datastruct
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -288,8 +289,108 @@ LevelLoop:
 	return rank
 }
 
+// minOpen == true => (min,  for example (1,true,2,false) => zscore xxx (1 2
+func (zsl *zSkipList) count(min float64, minOpen bool, max float64, maxOpen bool) uint {
+	// -inf +inf
+	if math.IsInf(min, -1) && math.IsInf(max, 1) {
+		return zsl.length
+	}
+
+	minRank := zsl.minScoreRank(min, minOpen)
+	maxRank := zsl.maxScoreRank(max, maxOpen)
+	fmt.Println(minRank, maxRank)
+	if minOpen {
+
+	}
+	// -inf:max
+	if minRank <= 0 {
+		return uint(maxRank)
+	}
+
+	if maxRank < 0 {
+		return zsl.length - uint(minRank) + 1
+	}
+
+	return uint(maxRank - minRank + 1)
+}
+
+// return -1 if score is inf
+func (zsl *zSkipList) minScoreRank(score float64, openInterval bool) int {
+	if math.IsInf(score, 0) {
+		return -1
+	}
+
+	var (
+		rank uint
+		x    = zsl.head
+		cur  = zsl.head
+	)
+loop:
+	for i := zsl.level - 1; i >= 0; i-- {
+		for x.levels[i].forward != nil &&
+			(x.levels[i].forward.score <= score) {
+			rank += x.levels[i].span
+			cur = x
+			x = x.levels[i].forward
+
+			// got the position
+			if x.score > score || (openInterval && x.score == score) {
+				// score not exit in the list, it just between two elements
+				if cur.score < score && x.score > score {
+					rank += 1
+				}
+
+				if x.score == score && openInterval {
+					rank += 1
+				}
+
+				break loop
+			}
+		}
+	}
+
+	return int(rank)
+}
+
+// return -1 if score is inf
+func (zsl *zSkipList) maxScoreRank(score float64, openInterval bool) int {
+	if math.IsInf(score, 0) {
+		return -1
+	}
+
+	var (
+		rank uint
+		x    = zsl.head
+	)
+loop:
+	for i := zsl.level - 1; i >= 0; i-- {
+		for x.levels[i].forward != nil &&
+			(x.levels[i].forward.score <= score) {
+			rank += x.levels[i].span
+			fmt.Println(rank, x.value, x.levels[i].span)
+			x = x.levels[i].forward
+
+			// got the position
+			if x.score > score || (openInterval && x.score == score) {
+				// score not exit in the list, it just between two elements
+				//if cur.score < score && x.score > score {
+				//	rank += 1
+				//}
+
+				if x.score == score && openInterval {
+					rank -= 1
+				}
+
+				break loop
+			}
+		}
+	}
+
+	return int(rank)
+}
+
 func (zs *zSet) zAdd(score float64, value string, flag int) int {
-	de := zs.findFromMap(value)
+	de := zs.loadDictEntry(value)
 	if de == nil {
 		// xx flag
 		if flag&ZAddInXx != 0 {
@@ -327,8 +428,17 @@ func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	return 0
 }
 
-func (zs *zSet) findFromMap(key string) *dictEntry {
+func (zs *zSet) loadDictEntry(key string) *dictEntry {
 	v, ok := zs.m.Load(key)
+	if !ok {
+		return nil
+	}
+
+	return v.(*dictEntry)
+}
+
+func (zs *zSet) loadAndDeleteDictEntry(key string) *dictEntry {
+	v, ok := zs.m.LoadAndDelete(key)
 	if !ok {
 		return nil
 	}
@@ -387,7 +497,7 @@ func ZScore(key, value string) (float64, error) {
 		return 0, err
 	}
 
-	de := zs.findFromMap(value)
+	de := zs.loadDictEntry(value)
 	if de == nil {
 		return 0, ErrNil
 	}
@@ -401,11 +511,50 @@ func ZRank(key, value string) (uint, error) {
 		return 0, err
 	}
 
-	de := zs.findFromMap(value)
+	de := zs.loadDictEntry(value)
 	if de == nil {
 		return 0, ErrNil
 	}
 
 	score := *(de.value.(*float64))
 	return zs.zsl.rank(score, value), nil
+}
+
+func ZRem(key string, values ...string) (int, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	var cnt int
+	for _, value := range values {
+		de := zs.loadAndDeleteDictEntry(value)
+		if de == nil {
+			continue
+		}
+
+		score := *(de.value.(*float64))
+		zs.zsl.delete(score, value, nil)
+		cnt++
+	}
+
+	return cnt, nil
+}
+
+func ZCard(key string) (uint, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	return zs.zsl.length, nil
+}
+
+func ZCount(key string, min float64, minOpenInterval bool, max float64, maxOpenInterval bool) (uint, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	return zs.zsl.count(min, minOpenInterval, max, maxOpenInterval), nil
 }
