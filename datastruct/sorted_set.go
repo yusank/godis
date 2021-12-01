@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -27,8 +28,8 @@ func newZSet() *zSet {
 
 type zSkipList struct {
 	head, tail *zSkipListNode
-	length     uint // 总长度
-	level      int  // 最大高度
+	length     int // 总长度
+	level      int // 最大高度
 }
 
 type zSkipListNode struct {
@@ -141,7 +142,7 @@ func (zsl *zSkipList) insert(score float64, value string) *zSkipListNode {
 		for i = zsl.level; i < level; i++ {
 			rank[i] = 0
 			update[i] = zsl.head
-			update[i].levels[i].span = zsl.length
+			update[i].levels[i].span = uint(zsl.length)
 		}
 
 		zsl.level = level
@@ -290,7 +291,7 @@ LevelLoop:
 }
 
 // minOpen == true => (min,  for example (1,true,2,false) => zscore xxx (1 2
-func (zsl *zSkipList) count(min float64, minOpen bool, max float64, maxOpen bool) uint {
+func (zsl *zSkipList) count(min float64, minOpen bool, max float64, maxOpen bool) int {
 	// -inf +inf
 	if math.IsInf(min, -1) && math.IsInf(max, 1) {
 		return zsl.length
@@ -304,14 +305,14 @@ func (zsl *zSkipList) count(min float64, minOpen bool, max float64, maxOpen bool
 	}
 	// -inf:max
 	if minRank <= 0 {
-		return uint(maxRank)
+		return maxRank
 	}
 
 	if maxRank < 0 {
-		return zsl.length - uint(minRank) + 1
+		return zsl.length - minRank + 1
 	}
 
-	return uint(maxRank - minRank + 1)
+	return maxRank - minRank + 1
 }
 
 // return -1 if score is inf
@@ -389,23 +390,80 @@ loop:
 	return int(rank)
 }
 
-func (zs *zSet) zAdd(score float64, value string, flag int) int {
+// todo add test case
+func (zsl *zSkipList) zRange(start, stop int, withScores bool) []string {
+	// todo 需要重新整理一下下面处理 start 和 stop 逻辑 有点啰嗦 可能考虑太多情况了
+	if start < 0 {
+		start = start + zsl.length
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	if stop < 0 {
+		stop = stop + zsl.length
+	}
+
+	if start > stop || start >= zsl.length {
+		return nil
+	}
+	if stop >= zsl.length {
+		stop = zsl.length - 1
+	}
+
+	node := zsl.findElementByRank(uint(start) + 1)
+	var (
+		rangeLen = stop - start + 1
+		result   []string
+	)
+	for rangeLen > 0 {
+		result = append(result, node.value)
+		if withScores {
+			result = append(result, strconv.FormatFloat(node.score, 'g', -1, 64))
+		}
+
+		node = node.levels[0].forward
+	}
+
+	return result
+}
+
+func (zsl *zSkipList) findElementByRank(rank uint) *zSkipListNode {
+	var (
+		x         = zsl.head
+		traversed uint
+	)
+
+	for i := zsl.level - 1; i >= 0; i-- {
+		for x.levels[i].forward != nil && traversed+x.levels[i].span <= rank {
+			traversed += x.levels[i].span
+			x = x.levels[i].forward
+		}
+		if traversed == rank {
+			return x
+		}
+	}
+
+	return nil
+}
+
+func (zs *zSet) zAdd(score float64, value string, flag int) *zSkipListNode {
 	de := zs.loadDictEntry(value)
 	if de == nil {
 		// xx flag
 		if flag&ZAddInXx != 0 {
-			return 0
+			return nil
 		}
 
 		node := zs.zsl.insert(score, value)
 		zs.m.Store(value, withValue(&node.score))
-		return 1
+		return node
 	}
 
 	// nx flag
 	if flag&ZAddInNx != 0 {
 		// exist
-		return 0
+		return nil
 	}
 
 	// exists
@@ -417,15 +475,15 @@ func (zs *zSet) zAdd(score float64, value string, flag int) int {
 	if score != oldScore {
 		node := zs.zsl.updateScore(oldScore, score, value)
 		if node == nil {
-			return 0
+			return nil
 		}
 
 		// update score
 		de.setValue(&node.score)
-		return 1
+		return node
 	}
 
-	return 0
+	return nil
 }
 
 func (zs *zSet) loadDictEntry(key string) *dictEntry {
@@ -485,7 +543,9 @@ func ZAdd(key string, members []*ZSetMember, flag int) (int, error) {
 
 	var cnt int
 	for _, m := range members {
-		cnt += zs.zAdd(m.Score, m.Value, flag)
+		if node := zs.zAdd(m.Score, m.Value, flag); node != nil {
+			cnt++
+		}
 	}
 
 	return cnt, nil
@@ -541,7 +601,7 @@ func ZRem(key string, values ...string) (int, error) {
 	return cnt, nil
 }
 
-func ZCard(key string) (uint, error) {
+func ZCard(key string) (int, error) {
 	zs, err := loadAndCheckZSet(key, true)
 	if err != nil {
 		return 0, err
@@ -550,11 +610,33 @@ func ZCard(key string) (uint, error) {
 	return zs.zsl.length, nil
 }
 
-func ZCount(key string, min float64, minOpenInterval bool, max float64, maxOpenInterval bool) (uint, error) {
+func ZCount(key string, min float64, minOpenInterval bool, max float64, maxOpenInterval bool) (int, error) {
 	zs, err := loadAndCheckZSet(key, true)
 	if err != nil {
 		return 0, err
 	}
 
 	return zs.zsl.count(min, minOpenInterval, max, maxOpenInterval), nil
+}
+
+func ZIncr(key string, score float64, value string) (float64, error) {
+	zs, err := loadAndCheckZSet(key, false)
+	if err != nil && err != ErrNil {
+		return 0, err
+	}
+
+	if zs == nil {
+		zs = newZSet()
+		defaultCache.keys.Store(key, &KeyInfo{
+			Type:  KeyTypeSortedSet,
+			Value: zs,
+		})
+	}
+
+	node := zs.zAdd(score, value, ZAddInIncr)
+	if node == nil {
+		return 0, ErrNil
+	}
+
+	return node.score, nil
 }

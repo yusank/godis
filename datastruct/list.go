@@ -179,12 +179,13 @@ func (l *List) LRange(start, stop int) (values []string) {
 		stop = stop + l.length
 	}
 
-	if start > stop || start > l.length || stop < 0 {
+	// start already >=0 , so if stop < 0 then this case is true
+	if start > stop || start > l.length {
 		return nil
 	}
-
-	start = convertNegativeIndex(start, l.length)
-	stop = convertNegativeIndex(stop, l.length)
+	if stop >= l.length {
+		stop = l.length - 1
+	}
 
 	var (
 		head = l.head
@@ -201,19 +202,6 @@ func (l *List) LRange(start, stop int) (values []string) {
 	}
 
 	return
-}
-
-func convertNegativeIndex(i int, ln int) int {
-	if i >= 0 {
-		return i
-	}
-
-	i = ln + i
-	if i < 0 {
-		return 0
-	}
-
-	return i
 }
 
 // LRemAll .

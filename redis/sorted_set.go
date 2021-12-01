@@ -180,3 +180,25 @@ func zCount(c *Command) (*protocol.Response, error) {
 
 	return protocol.NewResponseWithInteger(int64(cnt)), nil
 }
+
+// zIncr .
+func zIncr(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	score, err := strconv.ParseFloat(c.Values[1], 64)
+	if err != nil {
+		return nil, ErrValueOutOfRange
+	}
+
+	curScore, err := datastruct.ZIncr(c.Values[0], score, c.Values[2])
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithInteger(0), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponseWithBulkString(strconv.FormatFloat(curScore, 'g', -1, 64)), nil
+}
