@@ -49,4 +49,5 @@ var knownCommands = map[string]ExecuteFunc{
 	"zincr":         zIncr,
 	"zrange":        zRange,
 	"zrangebyscore": zRangeByScore,
+	"zrevrange":     zRevRange,
 }

@@ -219,3 +219,35 @@ func zRangeByScore(c *Command) (*protocol.Response, error) {
 
 	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
+
+// zRevRange .
+func zRevRange(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var (
+		key    = c.Values[0]
+		minStr = c.Values[1]
+		maxStr = c.Values[2]
+		flag   = datastruct.ZRangeInNone
+	)
+
+	for _, s := range c.Values[2:] {
+		switch strings.ToLower(s) {
+		case "withscores":
+			flag |= datastruct.ZRangeInWithScores
+		}
+	}
+
+	values, err := datastruct.ZRevRange(key, minStr, maxStr, flag)
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithNilBulk(), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
+
+}

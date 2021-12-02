@@ -436,6 +436,44 @@ func (zsl *zSkipList) zRange(start, stop int, withScores bool) []string {
 	return result
 }
 
+// todo merge zRange and zRevRange use flag to distinguish
+func (zsl *zSkipList) zRevRange(start, stop int, withScores bool) []string {
+	if start < 0 {
+		start = start + zsl.length
+		if start < 0 {
+			start = 0
+		}
+	}
+
+	if stop < 0 {
+		stop = stop + zsl.length
+	}
+
+	if start > stop || start >= zsl.length {
+		return nil
+	}
+	if stop >= zsl.length {
+		stop = zsl.length - 1
+	}
+
+	node := zsl.findElementByRank(uint(stop) + 1)
+	var (
+		rangeLen = stop - start + 1
+		result   []string
+	)
+	for rangeLen > 0 {
+		result = append(result, node.value)
+		if withScores {
+			result = append(result, strconv.FormatFloat(node.score, 'g', -1, 64))
+		}
+
+		node = node.backward
+		rangeLen--
+	}
+
+	return result
+}
+
 func (zsl *zSkipList) zRangeByScore(min float64, minOpen bool, max float64, maxOpen bool, withScores bool) []string {
 	// -inf +inf
 	if math.IsInf(min, -1) && math.IsInf(max, 1) {
@@ -716,6 +754,27 @@ func ZRange(key string, minStr, maxStr string, flag int) ([]string, error) {
 	}
 
 	return zs.zsl.zRange(start, stop, withScores), nil
+}
+
+func ZRevRange(key, minStr, maxStr string, flag int) ([]string, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var withScores = flag&ZRangeInWithScores != 0
+
+	start, err := strconv.Atoi(minStr)
+	if err != nil {
+		return nil, ErrNotInteger
+	}
+
+	stop, err := strconv.Atoi(maxStr)
+	if err != nil {
+		return nil, ErrNotInteger
+	}
+
+	return zs.zsl.zRevRange(start, stop, withScores), nil
 }
 
 // parse score input and return value and true if is open interval
