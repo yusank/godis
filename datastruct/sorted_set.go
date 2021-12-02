@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -24,6 +25,22 @@ func newZSet() *zSet {
 		m:   sync.Map{},
 		zsl: newZSkipList(),
 	}
+}
+
+type dictEntry struct {
+	value interface{}
+}
+
+func (de *dictEntry) getValue() interface{} {
+	return de.value
+}
+
+func (de *dictEntry) setValue(v interface{}) {
+	de.value = v
+}
+
+func withValue(v interface{}) *dictEntry {
+	return &dictEntry{value: v}
 }
 
 type zSkipList struct {
@@ -300,9 +317,7 @@ func (zsl *zSkipList) count(min float64, minOpen bool, max float64, maxOpen bool
 	minRank := zsl.minScoreRank(min, minOpen)
 	maxRank := zsl.maxScoreRank(max, maxOpen)
 	fmt.Println(minRank, maxRank)
-	if minOpen {
 
-	}
 	// -inf:max
 	if minRank <= 0 {
 		return maxRank
@@ -368,16 +383,10 @@ loop:
 		for x.levels[i].forward != nil &&
 			(x.levels[i].forward.score <= score) {
 			rank += x.levels[i].span
-			fmt.Println(rank, x.value, x.levels[i].span)
 			x = x.levels[i].forward
 
 			// got the position
 			if x.score > score || (openInterval && x.score == score) {
-				// score not exit in the list, it just between two elements
-				//if cur.score < score && x.score > score {
-				//	rank += 1
-				//}
-
 				if x.score == score && openInterval {
 					rank -= 1
 				}
@@ -390,9 +399,7 @@ loop:
 	return int(rank)
 }
 
-// todo add test case
 func (zsl *zSkipList) zRange(start, stop int, withScores bool) []string {
-	// todo 需要重新整理一下下面处理 start 和 stop 逻辑 有点啰嗦 可能考虑太多情况了
 	if start < 0 {
 		start = start + zsl.length
 		if start < 0 {
@@ -423,9 +430,31 @@ func (zsl *zSkipList) zRange(start, stop int, withScores bool) []string {
 		}
 
 		node = node.levels[0].forward
+		rangeLen--
 	}
 
 	return result
+}
+
+func (zsl *zSkipList) zRangeByScore(min float64, minOpen bool, max float64, maxOpen bool, withScores bool) []string {
+	// -inf +inf
+	if math.IsInf(min, -1) && math.IsInf(max, 1) {
+		return zsl.zRange(0, zsl.length, withScores)
+	}
+
+	minRank := zsl.minScoreRank(min, minOpen)
+	maxRank := zsl.maxScoreRank(max, maxOpen)
+	fmt.Println(minRank, maxRank)
+	// -inf:max
+	if minRank <= 0 {
+		return zsl.zRange(0, maxRank-1, withScores)
+	}
+
+	if maxRank < 0 {
+		return zsl.zRange(minRank-1, zsl.length, withScores)
+	}
+
+	return zsl.zRange(minRank-1, maxRank-1, withScores)
 }
 
 func (zsl *zSkipList) findElementByRank(rank uint) *zSkipListNode {
@@ -610,13 +639,23 @@ func ZCard(key string) (int, error) {
 	return zs.zsl.length, nil
 }
 
-func ZCount(key string, min float64, minOpenInterval bool, max float64, maxOpenInterval bool) (int, error) {
+func ZCount(key, minStr, maxStr string) (int, error) {
 	zs, err := loadAndCheckZSet(key, true)
 	if err != nil {
 		return 0, err
 	}
 
-	return zs.zsl.count(min, minOpenInterval, max, maxOpenInterval), nil
+	minScore, minOpen, err := handleFloatScoreStr(minStr)
+	if err != nil {
+		return 0, err
+	}
+
+	maxScore, maxOpen, err := handleFloatScoreStr(maxStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return zs.zsl.count(minScore, minOpen, maxScore, maxOpen), nil
 }
 
 func ZIncr(key string, score float64, value string) (float64, error) {
@@ -639,4 +678,66 @@ func ZIncr(key string, score float64, value string) (float64, error) {
 	}
 
 	return node.score, nil
+}
+
+// ZRange not support limit for now
+func ZRange(key string, minStr, maxStr string, flag int) ([]string, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var withScores = flag&ZRangeInWithScores != 0
+
+	if flag&ZRangeInByScore != 0 {
+		// byScore flag
+		minScore, minOpen, err1 := handleFloatScoreStr(minStr)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		maxScore, maxOpen, err1 := handleFloatScoreStr(maxStr)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		return zs.zsl.zRangeByScore(minScore, minOpen, maxScore, maxOpen, withScores), nil
+	}
+
+	start, err := strconv.Atoi(minStr)
+	if err != nil {
+		return nil, ErrNotInteger
+	}
+
+	stop, err := strconv.Atoi(maxStr)
+	if err != nil {
+		return nil, ErrNotInteger
+	}
+
+	return zs.zsl.zRange(start, stop, withScores), nil
+}
+
+// parse score input and return value and true if is open interval
+// example '(5' => 5, true,   '3' => 3, false  '-inf' => math.Inf(-1), false
+func handleFloatScoreStr(str string) (float64, bool, error) {
+	str = strings.ToLower(str)
+	switch str {
+	case "-inf":
+		return math.Inf(-1), false, nil
+	case "+inf":
+		return math.Inf(1), false, nil
+	default:
+		var openInterval bool
+		tmp := strings.TrimPrefix(str, "(")
+		if tmp != str {
+			openInterval = true
+		}
+
+		f, err := strconv.ParseFloat(tmp, 64)
+		if err != nil {
+			return 0, false, ErrNotFloat
+		}
+
+		return f, openInterval, nil
+	}
 }

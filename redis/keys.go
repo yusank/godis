@@ -13,9 +13,7 @@ func keys(c *Command) (*protocol.Response, error) {
 	}
 
 	values := datastruct.Keys(c.Values[0])
-	rsp := protocol.NewResponse(true)
-	rsp.AppendBulkStrings(values...)
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
 
 func exists(c *Command) (*protocol.Response, error) {

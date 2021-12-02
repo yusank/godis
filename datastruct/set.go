@@ -1,17 +1,45 @@
 package datastruct
 
-type dictEntry struct {
-	value interface{}
+import (
+	"sync"
+)
+
+type set struct {
+	m sync.Map
 }
 
-func (de *dictEntry) getValue() interface{} {
-	return de.value
+func newSet() *set {
+	return &set{m: sync.Map{}}
 }
 
-func (de *dictEntry) setValue(v interface{}) {
-	de.value = v
+func loadSet(key string) (*set, error) {
+	info, err := loadKeyInfo(key, KeyTypeSortedSet)
+	if err != nil {
+		return nil, err
+	}
+
+	s := info.Value.(*set)
+	return s, nil
 }
 
-func withValue(v interface{}) *dictEntry {
-	return &dictEntry{value: v}
+func SAdd(key string, values ...string) (int, error) {
+	s, err := loadSet(key)
+	if err == ErrNil {
+		s = newSet()
+		err = nil
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	var cnt int
+	for _, value := range values {
+		_, loaded := s.m.LoadOrStore(value, 0)
+		if !loaded {
+			cnt++
+		}
+	}
+
+	return cnt, nil
 }

@@ -47,4 +47,5 @@ var knownCommands = map[string]ExecuteFunc{
 	"zcard":  zCard,
 	"zcount": zCount,
 	"zincr":  zIncr,
+	"zrange": zRange,
 }

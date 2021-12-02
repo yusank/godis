@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"math"
 	"strconv"
 	"strings"
 
@@ -132,45 +131,12 @@ func zCount(c *Command) (*protocol.Response, error) {
 	}
 
 	var (
-		minStr           = strings.ToLower(c.Values[1])
-		maxStr           = strings.ToLower(c.Values[2])
-		min, max         float64
-		minOpen, maxOpen bool
+		key    = c.Values[0]
+		minStr = strings.ToLower(c.Values[1])
+		maxStr = strings.ToLower(c.Values[2])
 	)
 
-	switch minStr {
-	case "-inf":
-		min = math.Inf(-1)
-	default:
-		tmp := strings.TrimPrefix(minStr, "(")
-		if tmp != minStr {
-			minOpen = true
-		}
-
-		f, err := strconv.ParseFloat(tmp, 64)
-		if err != nil {
-			return nil, ErrValueOutOfRange
-		}
-		min = f
-	}
-
-	switch maxStr {
-	case "+inf":
-		max = math.Inf(1)
-	default:
-		tmp := strings.TrimPrefix(maxStr, "(")
-		if tmp != maxStr {
-			maxOpen = true
-		}
-
-		f, err := strconv.ParseFloat(tmp, 64)
-		if err != nil {
-			return nil, ErrValueOutOfRange
-		}
-		max = f
-	}
-
-	cnt, err := datastruct.ZCount(c.Values[0], min, minOpen, max, maxOpen)
+	cnt, err := datastruct.ZCount(key, minStr, maxStr)
 	if err == datastruct.ErrNil {
 		return protocol.NewResponseWithInteger(0), nil
 	}
@@ -201,4 +167,38 @@ func zIncr(c *Command) (*protocol.Response, error) {
 	}
 
 	return protocol.NewResponseWithBulkString(strconv.FormatFloat(curScore, 'g', -1, 64)), nil
+}
+
+// zRange .
+func zRange(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var (
+		key    = c.Values[0]
+		minStr = c.Values[1]
+		maxStr = c.Values[2]
+		flag   = datastruct.ZRangeInNone
+	)
+
+	for _, s := range c.Values[2:] {
+		switch strings.ToLower(s) {
+		case "withscores":
+			flag |= datastruct.ZRangeInWithScores
+		case "byscore":
+			flag |= datastruct.ZRangeInByScore
+
+		}
+	}
+
+	values, err := datastruct.ZRange(key, minStr, maxStr, flag)
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithNilBulk(), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }

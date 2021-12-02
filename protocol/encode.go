@@ -94,13 +94,15 @@ func (r *Response) AppendBulkInterfaces(slice ...interface{}) {
 	}
 }
 
-func (r *Response) AppendBulkStrings(strSlice ...string) {
+func (r *Response) AppendBulkStrings(strSlice ...string) *Response {
 	for _, str := range strSlice {
 		r.Items = append(r.Items, &ResponseItem{
 			Value: str,
 			Type:  TypeBulkStrings,
 		})
 	}
+
+	return r
 }
 
 func (r *Response) Encode() []byte {
