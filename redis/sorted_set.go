@@ -202,3 +202,20 @@ func zRange(c *Command) (*protocol.Response, error) {
 
 	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
+
+// zRangeByScore .
+func zRangeByScore(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 3 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	values, err := datastruct.ZRange(c.Values[0], c.Values[1], c.Values[2], datastruct.ZRangeInByScore)
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithNilBulk(), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
+}

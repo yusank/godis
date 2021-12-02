@@ -4,7 +4,7 @@ import (
 	"github.com/yusank/godis/protocol"
 )
 
-// ExecuteFunc define command execute, returns slice of string as result and error if has any error occur .
+// ExecuteFunc define command execute, returns slice of string as result and error if any error occur .
 type ExecuteFunc func(*Command) (*protocol.Response, error)
 
 var knownCommands = map[string]ExecuteFunc{
@@ -40,12 +40,13 @@ var knownCommands = map[string]ExecuteFunc{
 	"linsert": lInsert,
 	//... more
 	// zset
-	"zadd":   zAdd,
-	"zscore": zScore,
-	"zrank":  zRank,
-	"zrem":   zRem,
-	"zcard":  zCard,
-	"zcount": zCount,
-	"zincr":  zIncr,
-	"zrange": zRange,
+	"zadd":          zAdd,
+	"zscore":        zScore,
+	"zrank":         zRank,
+	"zrem":          zRem,
+	"zcard":         zCard,
+	"zcount":        zCount,
+	"zincr":         zIncr,
+	"zrange":        zRange,
+	"zrangebyscore": zRangeByScore,
 }

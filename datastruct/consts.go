@@ -33,4 +33,5 @@ const (
 	ZRangeInNone       = 0
 	ZRangeInWithScores = 1 << (iota - 1)
 	ZRangeInByScore
+	ZRangeInByLex
 )

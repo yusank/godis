@@ -681,6 +681,7 @@ func ZIncr(key string, score float64, value string) (float64, error) {
 }
 
 // ZRange not support limit for now
+// todo support by lex flag
 func ZRange(key string, minStr, maxStr string, flag int) ([]string, error) {
 	zs, err := loadAndCheckZSet(key, true)
 	if err != nil {
