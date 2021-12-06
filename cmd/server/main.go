@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var (
 		addr      string
 		debugMode bool
@@ -23,7 +23,7 @@ func main() {
 		debug()
 	}
 
-	srv := server.NewServer(addr, nil, &handler.MessageHandler{})
+	srv := server.NewServer(addr, nil, &handler.TCPHandler{})
 
 	if err := srv.Start(); err != nil {
 		log.Println("exiting: ", err)
