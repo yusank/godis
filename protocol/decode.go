@@ -71,7 +71,6 @@ func DecodeFromReader(r api.Reader) (rec Receive, err error) {
 
 	rec = append(rec, str)
 	return
-
 }
 
 func decodeSingleLine(line []byte) (str string, length int, desc byte, err error) {
