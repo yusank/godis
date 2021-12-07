@@ -11,6 +11,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+github.com/yusank/concurrent-map v1.1.0 h1:lDHxCdnrbl0Wk8RCMSdxCSDqXIOo85nmWfqTcvErZRU=
+github.com/yusank/concurrent-map v1.1.0/go.mod h1:066HVtZmuxZoaqHiqofEbzhKuCFZSzcFSiw7JzwhUXQ=
 github.com/yusank/glob v0.3.0 h1:bbAoWxHx710ZdGKrC4hq6/SycMefqBhGn/2bERM7zUM=
 github.com/yusank/glob v0.3.0/go.mod h1:ALNfSFonrfDwgSGwf/2zvoeT/q7aLRI7PHSX0A3X8Uk=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

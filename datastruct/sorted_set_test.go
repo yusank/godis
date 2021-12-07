@@ -143,10 +143,10 @@ func Test_zSkipList_count(t *testing.T) {
 			args: args{
 				min:     0,
 				minOpen: false,
-				max:     6,
+				max:     1,
 				maxOpen: false,
 			},
-			want: 3,
+			want: 1,
 		},
 		{
 			name: "single_1",
@@ -226,6 +226,185 @@ func Test_zSkipList_count(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := zs.zsl.count(tt.args.min, tt.args.minOpen, tt.args.max, tt.args.maxOpen)
 			assert.Equal(t, int(tt.want), int(got))
+		})
+	}
+}
+
+func Test_zSkipList_zRange(t *testing.T) {
+	type args struct {
+		start      int
+		stop       int
+		withScores bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "without_score",
+			args: args{
+				start:      0,
+				stop:       1,
+				withScores: false,
+			},
+			want: []string{"clang", "java"},
+		},
+		{
+			name: "with_score",
+			args: args{
+				start:      0,
+				stop:       1,
+				withScores: true,
+			},
+			want: []string{"clang", "1", "java", "2"},
+		},
+		{
+			name: "head_to_tail",
+			args: args{
+				start:      0,
+				stop:       -1,
+				withScores: false,
+			},
+			want: []string{"clang", "java", "world", "javascript", "hello", "golang"},
+		},
+		{
+			name: "reverse",
+			args: args{
+				start:      -2,
+				stop:       -1,
+				withScores: false,
+			},
+			want: []string{"hello", "golang"},
+		},
+		{
+			name: "out_of_range",
+			args: args{
+				start:      7,
+				stop:       10,
+				withScores: false,
+			},
+			want: nil,
+		},
+		{
+			name: "reverse_out_of_range",
+			args: args{
+				start:      -10,
+				stop:       -9,
+				withScores: false,
+			},
+			want: nil,
+		},
+	}
+
+	zs := prepareZSetForTest()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := zs.zsl.zRange(tt.args.start, tt.args.stop, tt.args.withScores)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_zSkipList_zRangeByScore(t *testing.T) {
+
+	type args struct {
+		min        float64
+		minOpen    bool
+		max        float64
+		maxOpen    bool
+		withScores bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "both_close",
+			args: args{
+				min:        0,
+				minOpen:    false,
+				max:        1,
+				maxOpen:    false,
+				withScores: false,
+			},
+			want: []string{"clang"},
+		},
+		{
+			name: "left_close",
+			args: args{
+				min:        0,
+				minOpen:    false,
+				max:        5,
+				maxOpen:    true,
+				withScores: false,
+			},
+			want: []string{"clang", "java"},
+		},
+
+		{
+			name: "right_close",
+			args: args{
+				min:        1,
+				minOpen:    true,
+				max:        5,
+				maxOpen:    false,
+				withScores: false,
+			},
+			want: []string{"java", "world"},
+		},
+		{
+			name: "both_open",
+			args: args{
+				min:        1,
+				minOpen:    true,
+				max:        5,
+				maxOpen:    true,
+				withScores: false,
+			},
+			want: []string{"java"},
+		},
+		{
+			name: "left_inf",
+			args: args{
+				min:        math.Inf(-1),
+				minOpen:    false,
+				max:        5,
+				maxOpen:    false,
+				withScores: false,
+			},
+			want: []string{"clang", "java", "world"},
+		},
+		{
+			name: "right_inf",
+			args: args{
+				min:        5,
+				minOpen:    false,
+				max:        math.Inf(1),
+				maxOpen:    false,
+				withScores: false,
+			},
+			want: []string{"world", "javascript", "hello", "golang"},
+		},
+		{
+			name: "both_inf",
+			args: args{
+				min:        math.Inf(-1),
+				minOpen:    false,
+				max:        math.Inf(1),
+				maxOpen:    false,
+				withScores: false,
+			},
+			want: []string{"clang", "java", "world", "javascript", "hello", "golang"},
+		},
+	}
+	zs := prepareZSetForTest()
+	zs.zsl.print()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := zs.zsl.zRangeByScore(tt.args.min, tt.args.minOpen, tt.args.max, tt.args.maxOpen, tt.args.withScores)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

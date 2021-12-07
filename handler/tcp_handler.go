@@ -4,15 +4,15 @@ import (
 	"context"
 	"log"
 
-	"github.com/yusank/godis/conn"
+	"github.com/yusank/godis/api"
 	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/protocol"
 	"github.com/yusank/godis/redis"
 )
 
-type MessageHandler struct{}
+type TCPHandler struct{}
 
-func (MessageHandler) Handle(r conn.Reader) ([]byte, error) {
+func (TCPHandler) Handle(r api.Reader) ([]byte, error) {
 	// io data to protocol msg
 	rec, err := protocol.DecodeFromReader(r)
 	if err != nil {

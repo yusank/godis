@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/yusank/godis/conn"
+	"github.com/yusank/godis/api"
 )
 
 /*
@@ -32,7 +32,7 @@ func (r Receive) String() string {
 	return sb.String()
 }
 
-func DecodeFromReader(r conn.Reader) (rec Receive, err error) {
+func DecodeFromReader(r api.Reader) (rec Receive, err error) {
 	rec = make([]string, 0)
 	b, err := r.ReadBytes('\n')
 	if err != nil {
@@ -71,7 +71,6 @@ func DecodeFromReader(r conn.Reader) (rec Receive, err error) {
 
 	rec = append(rec, str)
 	return
-
 }
 
 func decodeSingleLine(line []byte) (str string, length int, desc byte, err error) {
@@ -108,7 +107,7 @@ func readBulkOrArrayLength(line []byte) int {
 	return ln
 }
 
-func readBulkStrings(r conn.Reader, ln int) (val []byte, err error) {
+func readBulkStrings(r api.Reader, ln int) (val []byte, err error) {
 	if ln < 0 {
 		return
 	}
@@ -121,7 +120,7 @@ func readBulkStrings(r conn.Reader, ln int) (val []byte, err error) {
 	return
 }
 
-func readArray(r conn.Reader, ln int) ([]string, error) {
+func readArray(r api.Reader, ln int) ([]string, error) {
 	var items []string
 	for i := 0; i < ln; i++ {
 		line, err := r.ReadBytes('\n')

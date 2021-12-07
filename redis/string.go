@@ -109,6 +109,7 @@ func decrBy(c *Command) (*protocol.Response, error) {
 	return protocol.NewResponseWithInteger(i64), nil
 }
 
+// append
 func stringAppend(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {
 		return nil, ErrCommandArgsNotEnough

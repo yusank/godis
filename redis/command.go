@@ -13,6 +13,11 @@ type Command struct {
 	Values  []string
 }
 
+// ExecuteFunc define command execute, returns slice of string as result and error if any error occur .
+type ExecuteFunc func(*Command) (*protocol.Response, error)
+
+var implementedCommands = map[string]ExecuteFunc{}
+
 // sadd key1 value1
 // hadd key1 hkey hvalue
 // zadd key1 value1 score
@@ -38,7 +43,7 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 // Execute only return rsp bytes
 // if got any error when execution will transfer protocol bytes
 func (c *Command) Execute(ctx context.Context) *protocol.Response {
-	f, ok := knownCommands[c.Command]
+	f, ok := implementedCommands[c.Command]
 	if !ok {
 		return protocol.NewResponseWithError(ErrUnknownCommand)
 	}
@@ -49,4 +54,12 @@ func (c *Command) Execute(ctx context.Context) *protocol.Response {
 	}
 
 	return rsp
+}
+
+// PrintSupportedCmd call on debug mode
+func PrintSupportedCmd() {
+	log.Println("[redis/command] supported cmd count: ", len(implementedCommands))
+	for c := range implementedCommands {
+		log.Println("[redis/command] support: ", c)
+	}
 }

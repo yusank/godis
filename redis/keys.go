@@ -13,9 +13,7 @@ func keys(c *Command) (*protocol.Response, error) {
 	}
 
 	values := datastruct.Keys(c.Values[0])
-	rsp := protocol.NewResponse(true)
-	rsp.AppendBulkStrings(values...)
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
 
 func exists(c *Command) (*protocol.Response, error) {
@@ -32,6 +30,7 @@ func exists(c *Command) (*protocol.Response, error) {
 	return rsp, nil
 }
 
+// type
 func keyType(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
 		return nil, ErrCommandArgsNotEnough
@@ -45,4 +44,12 @@ func keyType(c *Command) (*protocol.Response, error) {
 
 	rsp := protocol.NewResponseWithSimpleString(string(kt))
 	return rsp, nil
+}
+
+func ping(c *Command) (*protocol.Response, error) {
+	return protocol.NewResponseWithSimpleString(RespPong), nil
+}
+
+func command(c *Command) (*protocol.Response, error) {
+	return protocol.NewResponseWithSimpleString(RespCommand), nil
 }

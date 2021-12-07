@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var (
 		addr      string
 		debugMode bool
@@ -23,7 +23,7 @@ func main() {
 		debug()
 	}
 
-	srv := server.NewServer(addr, nil, &handler.MessageHandler{})
+	srv := server.NewServer(addr, nil, &handler.TCPHandler{})
 
 	if err := srv.Start(); err != nil {
 		log.Println("exiting: ", err)
@@ -34,9 +34,11 @@ var prepareData = [][]string{
 	{"rpush", "list1", "1", "2", "3", "4", "5", "6"},
 	{"set", "key1", "hello"},
 	{"set", "key2", "10"},
+	{"zadd", "zset", "1", "a", "2", "b", "3", "c", "4", "d", "5", "e"},
 }
 
 func debug() {
+	redis.PrintSupportedCmd()
 	for _, datum := range prepareData {
 		c := &redis.Command{
 			Command: datum[0],

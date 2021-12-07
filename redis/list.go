@@ -142,9 +142,7 @@ func lRange(c *Command) (*protocol.Response, error) {
 		return protocol.NewResponseWithEmptyArray(), nil
 	}
 
-	rsp := protocol.NewResponse(true)
-	rsp.AppendBulkStrings(values...)
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
 
 // lRem .

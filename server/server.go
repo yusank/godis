@@ -1,25 +1,31 @@
 package server
 
 import (
+	"bufio"
 	"context"
-	"fmt"
+	"errors"
+	"io"
+	"log"
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
-	"github.com/yusank/godis/conn"
+	"github.com/yusank/godis/api"
 )
 
 type Server struct {
 	addr     string
 	ctx      context.Context
 	cancel   context.CancelFunc
-	handler  conn.Handler
+	handler  api.Handler
 	listener net.Listener
+	wg       *sync.WaitGroup
+	closed   bool
 }
 
-func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
+func NewServer(addr string, ctx context.Context, h api.Handler) *Server {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -27,6 +33,7 @@ func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
 	s := &Server{
 		addr:    addr,
 		handler: h,
+		wg:      new(sync.WaitGroup),
 	}
 
 	s.ctx, s.cancel = context.WithCancel(ctx)
@@ -34,30 +41,90 @@ func NewServer(addr string, ctx context.Context, h conn.Handler) *Server {
 }
 
 func (s *Server) Start() error {
-	defer conn.DestroyAllConn()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-
-	// 半阻塞，开始监听端口后异步处理
-	l, err := conn.Listen(s.ctx, s.addr, s.handler)
+	l, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("listen err:", err)
 		return err
 	}
-
+	log.Println("listen: ", l.Addr())
 	s.listener = l
 
-	select {
-	case <-s.ctx.Done():
-		return nil
-	case sig := <-sigChan:
-		s.Stop()
-		fmt.Printf("kill by signal:%s", sig.String())
-		return nil
-	}
+	go func() {
+		select {
+		case <-s.ctx.Done():
+			log.Println("kill by ctx")
+			return
+		case sig := <-sigChan:
+			s.Stop()
+			log.Printf("kill by signal:%s", sig.String())
+			return
+		}
+	}()
+
+	s.handleListener()
+	return nil
 }
 
 func (s *Server) Stop() {
-	_ = s.listener.Close()
 	s.cancel()
+	_ = s.listener.Close()
+	s.closed = true
+}
+
+func (s *Server) handleListener() {
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				log.Println("closed")
+				break
+			}
+
+			log.Println("accept err:", err)
+			continue
+		}
+
+		log.Println("new conn from:", conn.RemoteAddr().String())
+		s.wg.Add(1)
+		go s.handleConn(conn)
+	}
+
+	s.wg.Wait()
+}
+
+// handle by a new goroutine
+func (s *Server) handleConn(conn net.Conn) {
+	defer func() {
+		_ = conn.Close()
+		s.wg.Done()
+	}()
+
+	reader := bufio.NewReader(conn)
+	for {
+		if s.closed {
+			break
+		}
+
+		reply, err := s.handler.Handle(reader)
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Println("handle err:", err)
+			break
+		}
+
+		if len(reply) == 0 {
+			continue
+		}
+
+		_, err = conn.Write(reply)
+		if err != nil {
+			log.Println("write err:", err)
+			break
+		}
+	}
 }
