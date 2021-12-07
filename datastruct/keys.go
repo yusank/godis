@@ -73,7 +73,11 @@ func Keys(pattern string) (keys []string) {
 	return
 }
 
-func Del(key string) bool {
+func Del(key string) int {
 	_, ok := defaultCache.keys.LoadAndDelete(key)
-	return ok
+	if ok {
+		return 1
+	}
+
+	return 0
 }

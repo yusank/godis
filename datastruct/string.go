@@ -68,6 +68,7 @@ func Get(key string) (string, error) {
 }
 
 func MGet(keys ...string) []interface{} {
+	// TODO: make result as slice of interface with len(keys)
 	var result []interface{}
 
 	for _, key := range keys {

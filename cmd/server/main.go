@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 
+	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/redis"
 	"github.com/yusank/godis/server"
@@ -11,16 +12,12 @@ import (
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	var (
-		addr      string
-		debugMode bool
-	)
+	var addr string
 	flag.StringVar(&addr, "addr", ":7379", "server address")
-	flag.BoolVar(&debugMode, "debug", false, "debug mode, prepare some data")
 	flag.Parse()
 
-	if debugMode {
-		debug()
+	if debug.DEBUG {
+		insertPreData()
 	}
 
 	srv := server.NewServer(addr, nil, &handler.TCPHandler{})
@@ -37,7 +34,7 @@ var prepareData = [][]string{
 	{"zadd", "zset", "1", "a", "2", "b", "3", "c", "4", "d", "5", "e"},
 }
 
-func debug() {
+func insertPreData() {
 	redis.PrintSupportedCmd()
 	for _, datum := range prepareData {
 		c := &redis.Command{
@@ -45,7 +42,7 @@ func debug() {
 			Values:  datum[1:],
 		}
 
-		c.Execute(nil)
+		<-c.ExecuteWithContext(nil)
 	}
 
 	log.Println("data prepared")

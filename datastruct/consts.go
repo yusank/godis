@@ -9,9 +9,9 @@ type KeyType string
 const (
 	KeyTypeString    KeyType = "string"
 	KeyTypeList      KeyType = "list"
-	KeyTypeSet       KeyType = "set"
+	KeyTypeSet       KeyType = "setIfNotExists"
 	KeyTypeSortedSet KeyType = "sortedSet"
-	KeyTypeHashMap   KeyType = "hashMap"
+	KeyTypeHashTable KeyType = "hashTable"
 )
 
 var (
@@ -34,4 +34,9 @@ const (
 	ZRangeInWithScores = 1 << (iota - 1)
 	ZRangeInByScore
 	ZRangeInByLex
+)
+
+const (
+	HSetInNone = 0
+	HSetInNx   = 1 << (iota - 1)
 )

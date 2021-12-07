@@ -9,6 +9,7 @@ import (
 )
 
 type Command struct {
+	Ctx     context.Context
 	Command string
 	Values  []string
 }
@@ -40,20 +41,45 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 // 1. check cmd is valid
 // 2. found cmd excute func
 
-// Execute only return rsp bytes
+// ExecuteWithContext is async method which return a result channel and run command ina new go routine.
 // if got any error when execution will transfer protocol bytes
-func (c *Command) Execute(ctx context.Context) *protocol.Response {
-	f, ok := implementedCommands[c.Command]
-	if !ok {
-		return protocol.NewResponseWithError(ErrUnknownCommand)
+func (c *Command) ExecuteWithContext(ctx context.Context) chan *protocol.Response {
+	var (
+		rspChan = make(chan *protocol.Response, 1)
+	)
+
+	c.Ctx = ctx
+	if c.Ctx == nil {
+		c.Ctx = context.Background()
 	}
 
-	rsp, err := f(c)
-	if err != nil {
-		return protocol.NewResponseWithError(err)
+	go func() {
+		defer close(rspChan)
+		f, ok := implementedCommands[c.Command]
+		if !ok {
+			c.putRspToChan(rspChan, protocol.NewResponseWithError(ErrUnknownCommand))
+			return
+		}
+
+		rsp, err := f(c)
+		if err != nil {
+			c.putRspToChan(rspChan, protocol.NewResponseWithError(err))
+			return
+		}
+
+		c.putRspToChan(rspChan, rsp)
+	}()
+
+	return rspChan
+}
+
+func (c *Command) putRspToChan(ch chan *protocol.Response, rsp *protocol.Response) {
+	// if ctx has error won't put
+	if c.Ctx != nil && c.Ctx.Err() != nil {
+		return
 	}
 
-	return rsp
+	ch <- rsp
 }
 
 // PrintSupportedCmd call on debug mode

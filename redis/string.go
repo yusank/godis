@@ -23,16 +23,14 @@ func get(c *Command) (*protocol.Response, error) {
 
 	val, err := datastruct.Get(c.Values[0])
 	if err == datastruct.ErrNil {
-		return nil, nil
+		return protocol.NewResponseWithNilBulk(), nil
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	rsp := protocol.NewResponse()
-	rsp.AppendBulkInterfaces(val)
-	return rsp, nil
+	return protocol.NewResponse().AppendBulkInterfaces(val), nil
 }
 
 func mget(c *Command) (*protocol.Response, error) {
@@ -41,10 +39,8 @@ func mget(c *Command) (*protocol.Response, error) {
 	}
 
 	values := datastruct.MGet(c.Values...)
-	rsp := protocol.NewResponse(true)
-	rsp.AppendBulkInterfaces(values...)
 
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkInterfaces(values...), nil
 }
 
 func incr(c *Command) (*protocol.Response, error) {

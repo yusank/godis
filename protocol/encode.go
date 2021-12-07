@@ -85,13 +85,15 @@ func (r *Response) SetIsArray() {
 	r.IsArray = true
 }
 
-func (r *Response) AppendBulkInterfaces(slice ...interface{}) {
+func (r *Response) AppendBulkInterfaces(slice ...interface{}) *Response {
 	for _, v := range slice {
 		r.Items = append(r.Items, &ResponseItem{
 			Value: v,
 			Type:  TypeBulkStrings,
 		})
 	}
+
+	return r
 }
 
 func (r *Response) AppendBulkStrings(strSlice ...string) *Response {

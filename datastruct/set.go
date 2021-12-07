@@ -33,11 +33,7 @@ func (s *set) sIsMember(key string) bool {
 
 func (s *set) sRem(key string) int {
 	remove := s.m.RemoveCb(key, func(_ string, _ interface{}, exists bool) bool {
-		if exists {
-			return true
-		}
-
-		return false
+		return exists
 	})
 
 	if remove {

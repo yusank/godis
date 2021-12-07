@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/yusank/godis/api"
 	"github.com/yusank/godis/debug"
@@ -20,7 +21,25 @@ func (TCPHandler) Handle(r api.Reader) ([]byte, error) {
 	}
 	log.Println(rec)
 
-	rsp := redis.NewCommandFromReceive(rec).Execute(context.Background())
-	log.Println("rsp:", debug.Escape(string(rsp.Encode())))
+	// set timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+
+	// prepare cmd
+	cmd := redis.NewCommandFromReceive(rec)
+	rspChan := cmd.ExecuteWithContext(ctx)
+
+	// wait for result or context timeout
+	var rsp *protocol.Response
+	select {
+	case <-ctx.Done():
+		rsp = protocol.NewResponseWithError(ctx.Err())
+	case rsp = <-rspChan:
+	}
+
+	if debug.DEBUG {
+		log.Println("rsp:", debug.Escape(string(rsp.Encode())))
+	}
+
 	return rsp.Encode(), err
 }

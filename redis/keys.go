@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"time"
+
 	"github.com/yusank/godis/datastruct"
 	"github.com/yusank/godis/protocol"
 )
@@ -30,6 +32,16 @@ func exists(c *Command) (*protocol.Response, error) {
 	return rsp, nil
 }
 
+// del .
+func del(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	cnt := datastruct.Del(c.Values[0])
+	return protocol.NewResponseWithInteger(int64(cnt)), nil
+}
+
 // type
 func keyType(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
@@ -47,6 +59,7 @@ func keyType(c *Command) (*protocol.Response, error) {
 }
 
 func ping(c *Command) (*protocol.Response, error) {
+	time.Sleep(time.Second)
 	return protocol.NewResponseWithSimpleString(RespPong), nil
 }
 
