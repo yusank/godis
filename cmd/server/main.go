@@ -38,6 +38,7 @@ var prepareData = [][]string{
 }
 
 func debug() {
+	redis.PrintSupportedCmd()
 	for _, datum := range prepareData {
 		c := &redis.Command{
 			Command: datum[0],

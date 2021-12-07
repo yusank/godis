@@ -2,59 +2,81 @@ package datastruct
 
 import (
 	"sync"
+
+	cm "github.com/yusank/concurrent-map"
 )
 
 type set struct {
-	m      sync.Map
+	// m is a concurrentMap use as hash map and store set member as key
+	m      cm.ConcurrentMap
 	length int
 }
 
 func newSet() *set {
-	return &set{m: sync.Map{}}
+	return &set{
+		m: cm.New(),
+	}
 }
 
-func (s *set) toSlice() []string {
-	var (
-		result = make([]string, s.length)
-		i      int
-	)
-	s.m.Range(func(key, _ interface{}) bool {
-		result[i] = key.(string)
-		i++
-		return true
+func (s *set) sAdd(key string) int {
+	if s.m.SetIfAbsent(key, 0) {
+		s.length++
+		return 1
+	}
+
+	return 0
+}
+
+func (s *set) sIsMember(key string) bool {
+	return s.m.Has(key)
+}
+
+func (s *set) sRem(key string) int {
+	remove := s.m.RemoveCb(key, func(_ string, _ interface{}, exists bool) bool {
+		if exists {
+			return true
+		}
+
+		return false
+	})
+
+	if remove {
+		s.length--
+		return 1
+	}
+
+	return 0
+}
+
+func sDiff(s1, s2 *set) *set {
+	var result = newSet()
+	s1.m.IterCb(func(key string, _ interface{}) {
+		if !s2.m.Has(key) {
+			result.sAdd(key)
+		}
 	})
 
 	return result
 }
 
-func (s *set) sAdd(key string) int {
-	_, loaded := s.m.LoadOrStore(key, 0)
-	if loaded {
-		return 0
-	}
-	s.length++
-	return 1
-}
-
-func (s *set) sRem(key string) int {
-	_, loaded := s.m.LoadAndDelete(key)
-	if !loaded {
-		return 0
-	}
-
-	s.length--
-	return 1
-}
-
-func sDiff(s1, s2 *set) *set {
+func sInter(s1, s2 *set) *set {
 	var result = newSet()
-	s1.m.Range(func(key, _ interface{}) bool {
-		if _, ok := s2.m.Load(key); !ok {
-			result.sAdd(key.(string))
+	s1.m.IterCb(func(key string, _ interface{}) {
+		if s2.m.Has(key) {
+			result.sAdd(key)
 		}
-
-		return true
 	})
+
+	return result
+}
+
+func sUnion(sets ...*set) *set {
+	var result = newSet()
+	for _, s := range sets {
+		s.m.IterCb(func(key string, _ interface{}) {
+			result.sAdd(key)
+		})
+	}
 
 	return result
 }
@@ -123,6 +145,51 @@ func SRem(key string, values ...string) (int, error) {
 	return cnt, nil
 }
 
+func SIsMember(key, value string) (int, error) {
+	s, err := loadAndCheckSet(key, true)
+	if err != nil {
+		return 0, err
+	}
+
+	ok := s.m.Has(value)
+	if ok {
+		return 1, nil
+	}
+
+	return 0, nil
+}
+
+func SMembers(key string) ([]string, error) {
+	s, err := loadAndCheckSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.m.Keys(), nil
+}
+
+// SMove move value from source to target
+func SMove(source, target, value string) (int, error) {
+	sset, err := loadAndCheckSet(source, true)
+	if err != nil {
+		return 0, err
+	}
+
+	loaded := sset.m.RemoveCb(value, func(_ string, _ interface{}, exists bool) bool {
+		if exists {
+			return true
+		}
+
+		return false
+	})
+	if !loaded {
+		// not exist
+		return 0, ErrNil
+	}
+
+	return SAdd(target, value)
+}
+
 func SDiff(keys ...string) ([]string, error) {
 	var result *set
 
@@ -140,11 +207,11 @@ func SDiff(keys ...string) ([]string, error) {
 		result = sDiff(result, s)
 	}
 
-	if result == nil {
+	if result == nil || result.length == 0 {
 		return nil, ErrNil
 	}
 
-	return result.toSlice(), nil
+	return result.m.Keys(), nil
 }
 
 func SDiffStore(storeKey string, keys ...string) (int, error) {
@@ -174,4 +241,152 @@ func SDiffStore(storeKey string, keys ...string) (int, error) {
 	})
 
 	return result.length, nil
+}
+
+// SInter 交集
+func SInter(keys ...string) ([]string, error) {
+	var result *set
+
+	for i, key := range keys {
+		s, err := loadAndCheckSet(key, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if i == 0 {
+			result = s
+			continue
+		}
+
+		result = sInter(result, s)
+	}
+
+	if result == nil || result.length == 0 {
+		return nil, ErrNil
+	}
+
+	return result.m.Keys(), nil
+}
+
+func SInterStore(storeKey string, keys ...string) (int, error) {
+	var result *set
+
+	for i, key := range keys {
+		s, err := loadAndCheckSet(key, true)
+		if err != nil {
+			return 0, err
+		}
+
+		if i == 0 {
+			result = s
+			continue
+		}
+
+		result = sInter(result, s)
+	}
+
+	if result == nil {
+		result = newSet()
+	}
+
+	defaultCache.keys.Store(storeKey, &KeyInfo{
+		Type:  KeyTypeSet,
+		Value: result,
+	})
+
+	return result.length, nil
+}
+
+// SUnion 并集
+func SUnion(keys ...string) ([]string, error) {
+	var result *set
+
+	for i, key := range keys {
+		s, err := loadAndCheckSet(key, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if i == 0 {
+			result = s
+			continue
+		}
+
+		result = sUnion(result, s)
+	}
+
+	if result == nil || result.length == 0 {
+		return nil, ErrNil
+	}
+
+	return result.m.Keys(), nil
+}
+
+func SUnionStore(storeKey string, keys ...string) (int, error) {
+	var result *set
+
+	for i, key := range keys {
+		s, err := loadAndCheckSet(key, true)
+		if err != nil {
+			return 0, err
+		}
+
+		if i == 0 {
+			result = s
+			continue
+		}
+
+		result = sUnion(result, s)
+	}
+
+	if result == nil {
+		result = newSet()
+	}
+
+	defaultCache.keys.Store(storeKey, &KeyInfo{
+		Type:  KeyTypeSet,
+		Value: result,
+	})
+
+	return result.length, nil
+}
+
+/*
+ * compare with sync map
+ */
+
+type setSyncMap struct {
+	m      sync.Map
+	length int
+}
+
+func newSetSyncMap() *setSyncMap {
+	return &setSyncMap{
+		m: sync.Map{},
+	}
+}
+
+func (s *setSyncMap) sAdd(key string) int {
+	_, loaded := s.m.LoadOrStore(key, 0)
+	if loaded {
+		return 0
+	}
+
+	s.length++
+	return 1
+}
+
+func (s *setSyncMap) sIsMember(key string) bool {
+	_, found := s.m.Load(key)
+	return found
+}
+
+func (s *setSyncMap) sRem(key string) int {
+	_, loaded := s.m.LoadAndDelete(key)
+	if loaded {
+		s.length--
+		return 1
+	}
+
+	return 0
 }

@@ -19,3 +19,10 @@ endif
 	git add .
 	git commit -m '$(MSG)'
 	@echo "msg:$(MSG)"
+.PHONEY: gen_cmd
+gen_cmd: ## gen redis cmd code
+	go build -o go_build_gen_redis_cmd cmd/gen_redis_cmd/main.go
+	./go_build_gen_redis_cmd -d ./redis
+.PHONEY: clean
+clean: ## clean all generated code
+	rm -rf redis/*.cmd.go
