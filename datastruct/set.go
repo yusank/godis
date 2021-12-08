@@ -172,11 +172,7 @@ func SMove(source, target, value string) (int, error) {
 	}
 
 	loaded := sset.m.RemoveCb(value, func(_ string, _ interface{}, exists bool) bool {
-		if exists {
-			return true
-		}
-
-		return false
+		return exists
 	})
 	if !loaded {
 		// not exist

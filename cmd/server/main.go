@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 
@@ -41,7 +42,7 @@ func insertPreData() {
 			Values:  datum[1:],
 		}
 
-		<-c.ExecuteWithContext(nil)
+		<-c.ExecuteWithContext(context.TODO())
 	}
 
 	log.Println("data prepared")

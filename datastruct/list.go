@@ -79,36 +79,6 @@ func (n *listNode) addToTail(val string) *listNode {
 	return node
 }
 
-func (l *List) removeHead() {
-	if l.head == nil {
-		return
-	}
-
-	l.length--
-	l.head = l.head.next
-	if l.head == nil {
-		l.tail = nil
-		return
-	}
-
-	l.head.prev = nil
-}
-
-func (l *List) removeTail() {
-	if l.tail == nil {
-		return
-	}
-
-	l.length--
-	l.tail = l.tail.prev
-	if l.tail == nil {
-		l.head = nil
-		return
-	}
-
-	l.tail.next = nil
-}
-
 func (l *List) LPush(val string) {
 	l.length++
 	if l.head != nil {

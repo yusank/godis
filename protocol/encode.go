@@ -146,12 +146,10 @@ func (ri *ResponseItem) encode(buf *bytes.Buffer) {
 		_, _ = buf.WriteString(fmt.Sprintf(":%d\r\n", ri.Value.(int64)))
 	case TypeBulkStrings:
 		if ri.Value == nil {
-			_, _ = buf.WriteString(fmt.Sprintf("$-1\r\n"))
+			_, _ = buf.WriteString("$-1\r\n")
 			break
 		}
 		str := ri.Value.(string)
 		_, _ = buf.WriteString(fmt.Sprintf("$%d\r\n%s\r\n", len(str), str))
 	}
-
-	return
 }

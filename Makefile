@@ -6,7 +6,7 @@ server-run: ## run server as defualt mode
 	CGO_ENABLED=0 go run cmd/server/main.go
 .PHONY: lint
 lint: ## run golangci-lint for project
-	golangci-lint run ./...
+	golangci-lint run ./... -v
 .PHONY: test
 test: ## run all test cases
 	CGO_ENABLED=0 go test -v ./...

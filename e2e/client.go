@@ -19,7 +19,7 @@ func connAndSendMsg(addr string, rsp *protocol.Response) error {
 	// log.Println("write from client:", string(msg.Bytes()), n)
 
 	buf := make([]byte, n)
-	n, err1 = conn.Read(buf)
+	_, err1 = conn.Read(buf)
 	if err1 != nil {
 		return err1
 	}

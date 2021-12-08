@@ -212,7 +212,7 @@ func lInsert(c *Command) (*protocol.Response, error) {
 		return nil, ErrCommandArgsNotEnough
 	}
 
-	var flag = 0
+	var flag int
 	switch strings.ToLower(c.Values[1]) {
 	case "after":
 		flag = 1
