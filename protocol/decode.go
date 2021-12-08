@@ -57,6 +57,7 @@ func ReceiveDataAsync(r Reader) *AsyncReceive {
 				if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 					return
 				}
+				log.Println(err)
 				continue
 			}
 
@@ -71,7 +72,7 @@ func DecodeFromReader(r Reader) (rec Receive, err error) {
 	rec = make([]string, 0)
 	b, err := r.ReadBytes('\n')
 	if err != nil {
-		log.Println("readBytes err:", err)
+		//log.Println("readBytes err:", err)
 		return nil, err
 	}
 
@@ -121,6 +122,9 @@ func decodeSingleLine(line []byte) (str string, length int, desc byte, err error
 	case DescriptionSimpleStrings, DescriptionErrors, DescriptionIntegers:
 		str = string(line[1 : len(line)-CRLFLen])
 	default:
+		if string(line) == "PING\r\n" {
+			return "PING", 0, DescriptionSimpleStrings, nil
+		}
 		return "", 0, 0, fmt.Errorf("unsupport protocol: %s", string(line))
 	}
 

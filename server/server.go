@@ -99,8 +99,8 @@ loop:
 		select {
 		case <-s.ctx.Done():
 			break loop
-		case err := <-ar.ErrorChan:
-			log.Println("handle err:", err)
+		case <-ar.ErrorChan:
+			//log.Println("handle err:", err)
 			break loop
 		case rec := <-ar.ReceiveChan:
 			rsp := handleRequest(rec)

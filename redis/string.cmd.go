@@ -4,6 +4,7 @@ package redis
 
 func init() {
 	implementedCommands["set"] = set
+	implementedCommands["mset"] = mSet
 	implementedCommands["get"] = get
 	implementedCommands["mget"] = mget
 	implementedCommands["incr"] = incr

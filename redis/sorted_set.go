@@ -249,5 +249,66 @@ func zRevRange(c *Command) (*protocol.Response, error) {
 	}
 
 	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
+}
 
+// zPopMin .
+func zPopMin(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var (
+		key = c.Values[0]
+		cnt = 1
+		err error
+	)
+
+	if len(c.Values) > 1 {
+		cnt, err = strconv.Atoi(c.Values[1])
+		if err != nil {
+			return nil, datastruct.ErrNotInteger
+		}
+	}
+
+	values, err := datastruct.ZPopMin(key, cnt)
+	if err == datastruct.ErrNil || len(values) == 0 {
+		return protocol.NewResponseWithEmptyArray(), nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
+}
+
+// zPopMax .
+func zPopMix(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var (
+		key = c.Values[0]
+		cnt = 1
+		err error
+	)
+
+	if len(c.Values) > 1 {
+		cnt, err = strconv.Atoi(c.Values[1])
+		if err != nil {
+			return nil, datastruct.ErrNotInteger
+		}
+	}
+
+	values, err := datastruct.ZPopMax(key, cnt)
+	if err == datastruct.ErrNil || len(values) == 0 {
+		return protocol.NewResponseWithEmptyArray(), nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }

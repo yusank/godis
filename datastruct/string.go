@@ -13,6 +13,12 @@ func Set(key string, value string, options ...string) {
 	defaultCache.keys.Set(key, &KeyInfo{Type: KeyTypeString, Value: value})
 }
 
+func MSet(kvs ...string) {
+	for i := 0; i < len(kvs)-1; i += 2 {
+		Set(kvs[i], kvs[i+1])
+	}
+}
+
 func Append(key, value string) (ln int, err error) {
 	v, ok := defaultCache.keys.Get(key)
 	if !ok {

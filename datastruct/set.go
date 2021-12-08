@@ -44,6 +44,20 @@ func (s *set) sRem(key string) int {
 	return 0
 }
 
+func (s *set) sPop(cnt int) []string {
+	var (
+		result []string
+		ch     = s.m.IterBuffered()
+	)
+	for i := 0; i < cnt; i++ {
+		item := <-ch
+		s.sRem(item.Key)
+		result = append(result, item.Key)
+	}
+
+	return result
+}
+
 func sDiff(s1, s2 *set) *set {
 	var result = newSet()
 	s1.m.IterCb(func(key string, _ interface{}) {
@@ -82,7 +96,7 @@ func sUnion(sets ...*set) *set {
  */
 
 func loadAndCheckSet(key string, check bool) (*set, error) {
-	info, err := loadKeyInfo(key, KeyTypeSortedSet)
+	info, err := loadKeyInfo(key, KeyTypeSet)
 	if err != nil {
 		return nil, err
 	}
@@ -341,6 +355,15 @@ func SUnionStore(storeKey string, keys ...string) (int, error) {
 	})
 
 	return result.length, nil
+}
+
+func SPop(key string, cnt int) ([]string, error) {
+	s, err := loadAndCheckSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.sPop(cnt), nil
 }
 
 /*

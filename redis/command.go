@@ -34,7 +34,6 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 		c.Values = append(c.Values, e)
 	}
 
-	log.Println("command: ", c.Command)
 	return c
 }
 
@@ -54,15 +53,21 @@ func (c *Command) ExecuteWithContext(ctx context.Context) chan *protocol.Respons
 	}
 
 	go func() {
-		defer close(rspChan)
+		defer func() {
+			if recover() != nil {
+				log.Println(c.Command, c.Values)
+			}
+		}()
 		f, ok := implementedCommands[c.Command]
 		if !ok {
+			log.Println(c.Command, c.Values)
 			c.putRspToChan(rspChan, protocol.NewResponseWithError(ErrUnknownCommand))
 			return
 		}
 
 		rsp, err := f(c)
 		if err != nil {
+			log.Println(c.Command)
 			c.putRspToChan(rspChan, protocol.NewResponseWithError(err))
 			return
 		}

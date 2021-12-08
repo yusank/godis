@@ -28,3 +28,7 @@
 ## Design
 
 ![data transfer](./static/godis_data_transfer.png)
+
+## Benchmark
+
+[压测结果](benchmark/README.md)

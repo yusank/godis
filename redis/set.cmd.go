@@ -15,4 +15,5 @@ func init() {
 	implementedCommands["smembers"] = sMembers
 	implementedCommands["smove"] = sMove
 	implementedCommands["srem"] = sRem
+	implementedCommands["spop"] = SPop
 }

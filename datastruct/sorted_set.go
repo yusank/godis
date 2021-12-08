@@ -786,6 +786,50 @@ func ZRevRange(key, minStr, maxStr string, flag int) ([]string, error) {
 	return zs.zsl.zRevRange(start, stop, withScores), nil
 }
 
+func ZPopMin(key string, cnt int) ([]string, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for i := 0; i < cnt; i++ {
+		node := zs.zsl.findElementByRank(1)
+		if node == nil {
+			return result, nil
+		}
+
+		zs.zsl.delete(node.score, node.value, nil)
+		result = append(result,
+			node.value,
+			strconv.FormatFloat(node.score, 'g', -1, 64))
+	}
+
+	return result, nil
+}
+
+func ZPopMax(key string, cnt int) ([]string, error) {
+	zs, err := loadAndCheckZSet(key, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for i := 0; i < cnt; i++ {
+		node := zs.zsl.findElementByRank(uint(zs.zsl.length))
+		if node == nil {
+			return result, nil
+		}
+
+		zs.zsl.delete(node.score, node.value, nil)
+		result = append(result,
+			node.value,
+			strconv.FormatFloat(node.score, 'g', -1, 64))
+	}
+
+	return result, nil
+}
+
 // parse score input and return value and true if is open interval
 // example '(5' => 5, true,   '3' => 3, false  '-inf' => math.Inf(-1), false
 func handleFloatScoreStr(str string) (float64, bool, error) {

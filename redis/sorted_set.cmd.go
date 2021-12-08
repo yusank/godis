@@ -13,4 +13,6 @@ func init() {
 	implementedCommands["zrange"] = zRange
 	implementedCommands["zrangebyscore"] = zRangeByScore
 	implementedCommands["zrevrange"] = zRevRange
+	implementedCommands["zpopmin"] = zPopMin
+	implementedCommands["zpopmax"] = zPopMix
 }

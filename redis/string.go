@@ -16,6 +16,16 @@ func set(c *Command) (*protocol.Response, error) {
 	return protocol.NewResponseWithSimpleString(RespOK), nil
 }
 
+// mSet .
+func mSet(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 2 && len(c.Values)%2 != 0 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	datastruct.MSet(c.Values...)
+	return protocol.NewResponseWithSimpleString(RespOK), nil
+}
+
 func get(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
 		return nil, ErrCommandArgsNotEnough

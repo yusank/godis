@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"strconv"
+
 	"github.com/yusank/godis/datastruct"
 	"github.com/yusank/godis/protocol"
 )
@@ -214,4 +216,34 @@ func sRem(c *Command) (*protocol.Response, error) {
 	}
 
 	return protocol.NewResponseWithInteger(int64(cnt)), nil
+}
+
+// SPop .
+func SPop(c *Command) (*protocol.Response, error) {
+	if len(c.Values) < 1 {
+		return nil, ErrCommandArgsNotEnough
+	}
+
+	var (
+		key = c.Values[0]
+		cnt int
+		err error
+	)
+
+	if len(c.Values) > 1 {
+		cnt, err = strconv.Atoi(c.Values[1])
+		if err != nil {
+			return nil, datastruct.ErrNotInteger
+		}
+	}
+
+	values, err := datastruct.SPop(key, cnt)
+	if err == datastruct.ErrNil {
+		return protocol.NewResponseWithEmptyArray(), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }

@@ -435,7 +435,7 @@ func loadAndCheckList(key string, checkLen bool) (*List, error) {
 }
 
 func LPush(key string, values ...string) (ln int, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, false)
 	if err == ErrNil {
 		list := newListByLPush(values...)
 		defaultCache.keys.Set(key, &KeyInfo{
@@ -450,7 +450,6 @@ func LPush(key string, values ...string) (ln int, err error) {
 		return 0, err
 	}
 
-	list := info.Value.(*List)
 	for _, value := range values {
 		list.LPush(value)
 	}
@@ -459,12 +458,11 @@ func LPush(key string, values ...string) (ln int, err error) {
 }
 
 func LPop(key string, count int) (values []string, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, true)
 	if err != nil {
 		return nil, err
 	}
 
-	list := info.Value.(*List)
 	for count > 0 && list.length > 0 {
 		value, ok := list.LPop()
 		if !ok {
@@ -479,9 +477,9 @@ func LPop(key string, count int) (values []string, err error) {
 }
 
 func RPush(key string, values ...string) (ln int, err error) {
-	info, err := loadKeyInfo(key, KeyTypeList)
+	list, err := loadAndCheckList(key, false)
 	if err == ErrNil {
-		list := newListByRPush(values...)
+		list = newListByRPush(values...)
 		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeList,
 			Value: list,
@@ -494,7 +492,6 @@ func RPush(key string, values ...string) (ln int, err error) {
 		return 0, err
 	}
 
-	list := info.Value.(*List)
 	for _, value := range values {
 		list.RPush(value)
 	}
