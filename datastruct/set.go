@@ -99,7 +99,7 @@ func SAdd(key string, values ...string) (int, error) {
 	s, err := loadAndCheckSet(key, false)
 	if err == ErrNil {
 		s = newSet()
-		defaultCache.keys.Store(key, &KeyInfo{
+		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeSet,
 			Value: s,
 		})
@@ -231,7 +231,7 @@ func SDiffStore(storeKey string, keys ...string) (int, error) {
 		result = newSet()
 	}
 
-	defaultCache.keys.Store(storeKey, &KeyInfo{
+	defaultCache.keys.Set(storeKey, &KeyInfo{
 		Type:  KeyTypeSet,
 		Value: result,
 	})
@@ -285,7 +285,7 @@ func SInterStore(storeKey string, keys ...string) (int, error) {
 		result = newSet()
 	}
 
-	defaultCache.keys.Store(storeKey, &KeyInfo{
+	defaultCache.keys.Set(storeKey, &KeyInfo{
 		Type:  KeyTypeSet,
 		Value: result,
 	})
@@ -339,7 +339,7 @@ func SUnionStore(storeKey string, keys ...string) (int, error) {
 		result = newSet()
 	}
 
-	defaultCache.keys.Store(storeKey, &KeyInfo{
+	defaultCache.keys.Set(storeKey, &KeyInfo{
 		Type:  KeyTypeSet,
 		Value: result,
 	})
@@ -349,6 +349,7 @@ func SUnionStore(storeKey string, keys ...string) (int, error) {
 
 /*
  * compare with sync map
+ * just for compare, not using in any data struct
  */
 
 type setSyncMap struct {

@@ -3,8 +3,7 @@ package datastruct
 // keys file put functions for key operation
 
 import (
-	"sync"
-
+	cm "github.com/yusank/concurrent-map"
 	"github.com/yusank/glob"
 )
 
@@ -12,11 +11,11 @@ var defaultCache = newMemoryCache()
 
 // MemoryCache 总数结构
 type MemoryCache struct {
-	keys sync.Map
+	keys cm.ConcurrentMap
 }
 
 func newMemoryCache() *MemoryCache {
-	return &MemoryCache{keys: sync.Map{}}
+	return &MemoryCache{keys: cm.New()}
 }
 
 type KeyInfo struct {
@@ -29,7 +28,7 @@ type KeyInfo struct {
  */
 
 func loadKeyInfo(key string, tp KeyType) (info *KeyInfo, err error) {
-	v, ok := defaultCache.keys.Load(key)
+	v, ok := defaultCache.keys.Get(key)
 	if !ok {
 		return nil, ErrNil
 	}
@@ -47,12 +46,11 @@ func loadKeyInfo(key string, tp KeyType) (info *KeyInfo, err error) {
  */
 
 func Exists(key string) bool {
-	_, ok := defaultCache.keys.Load(key)
-	return ok
+	return defaultCache.keys.Has(key)
 }
 
 func Type(key string) (kt KeyType, found bool) {
-	v, ok := defaultCache.keys.Load(key)
+	v, ok := defaultCache.keys.Get(key)
 	if !ok {
 		return "", false
 	}
@@ -62,8 +60,7 @@ func Type(key string) (kt KeyType, found bool) {
 
 func Keys(pattern string) (keys []string) {
 	g := glob.MustCompile(pattern)
-	defaultCache.keys.Range(func(k, _ interface{}) bool {
-		key := k.(string)
+	defaultCache.keys.RangeCb(func(key string, _ interface{}) bool {
 		if g.Match(key) {
 			keys = append(keys, key)
 		}
@@ -74,8 +71,11 @@ func Keys(pattern string) (keys []string) {
 }
 
 func Del(key string) int {
-	_, ok := defaultCache.keys.LoadAndDelete(key)
-	if ok {
+	remove := defaultCache.keys.RemoveCb(key, func(key string, v interface{}, exists bool) bool {
+		return exists
+	})
+
+	if remove {
 		return 1
 	}
 

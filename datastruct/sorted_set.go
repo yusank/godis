@@ -6,15 +6,16 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	cm "github.com/yusank/concurrent-map"
 )
 
 // sortedSet implement via skip list
 
 // zSet is object contain skip list and map which store key-value pair
 type zSet struct {
-	m sync.Map // store key and value
+	m cm.ConcurrentMap // store key and value
 	// 在元素少于 100 & 每个元素大小小于 64 的时候,Redis 实际上用的是 zipList 这里作为知识点提了一下
 	// 	除非遇到性能问题,否则不准备同时支持 zipList 和 skipList
 	zsl *zSkipList // skip list
@@ -22,7 +23,7 @@ type zSet struct {
 
 func newZSet() *zSet {
 	return &zSet{
-		m:   sync.Map{},
+		m:   cm.New(),
 		zsl: newZSkipList(),
 	}
 }
@@ -523,7 +524,7 @@ func (zs *zSet) zAdd(score float64, value string, flag int) *zSkipListNode {
 		}
 
 		node := zs.zsl.insert(score, value)
-		zs.m.Store(value, withValue(&node.score))
+		zs.m.Set(value, withValue(&node.score))
 		return node
 	}
 
@@ -554,7 +555,7 @@ func (zs *zSet) zAdd(score float64, value string, flag int) *zSkipListNode {
 }
 
 func (zs *zSet) loadDictEntry(key string) *dictEntry {
-	v, ok := zs.m.Load(key)
+	v, ok := zs.m.Get(key)
 	if !ok {
 		return nil
 	}
@@ -563,12 +564,20 @@ func (zs *zSet) loadDictEntry(key string) *dictEntry {
 }
 
 func (zs *zSet) loadAndDeleteDictEntry(key string) *dictEntry {
-	v, ok := zs.m.LoadAndDelete(key)
-	if !ok {
+	var d *dictEntry
+	remove := zs.m.RemoveCb(key, func(key string, v interface{}, exists bool) bool {
+		if !exists {
+			return exists
+		}
+
+		d = v.(*dictEntry)
+		return exists
+	})
+	if !remove {
 		return nil
 	}
 
-	return v.(*dictEntry)
+	return d
 }
 
 /*
@@ -602,7 +611,7 @@ func ZAdd(key string, members []*ZSetMember, flag int) (int, error) {
 
 	if zs == nil {
 		zs = newZSet()
-		defaultCache.keys.Store(key, &KeyInfo{
+		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeSortedSet,
 			Value: zs,
 		})
@@ -704,7 +713,7 @@ func ZIncr(key string, score float64, value string) (float64, error) {
 
 	if zs == nil {
 		zs = newZSet()
-		defaultCache.keys.Store(key, &KeyInfo{
+		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeSortedSet,
 			Value: zs,
 		})

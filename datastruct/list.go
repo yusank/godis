@@ -468,7 +468,7 @@ func LPush(key string, values ...string) (ln int, err error) {
 	info, err := loadKeyInfo(key, KeyTypeList)
 	if err == ErrNil {
 		list := newListByLPush(values...)
-		defaultCache.keys.Store(key, &KeyInfo{
+		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeList,
 			Value: list,
 		})
@@ -512,7 +512,7 @@ func RPush(key string, values ...string) (ln int, err error) {
 	info, err := loadKeyInfo(key, KeyTypeList)
 	if err == ErrNil {
 		list := newListByRPush(values...)
-		defaultCache.keys.Store(key, &KeyInfo{
+		defaultCache.keys.Set(key, &KeyInfo{
 			Type:  KeyTypeList,
 			Value: list,
 		})

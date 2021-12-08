@@ -10,11 +10,11 @@ import (
  */
 
 func Set(key string, value string, options ...string) {
-	defaultCache.keys.Store(key, &KeyInfo{Type: KeyTypeString, Value: value})
+	defaultCache.keys.Set(key, &KeyInfo{Type: KeyTypeString, Value: value})
 }
 
 func Append(key, value string) (ln int, err error) {
-	v, ok := defaultCache.keys.Load(key)
+	v, ok := defaultCache.keys.Get(key)
 	if !ok {
 		Set(key, value)
 		return len(value), nil
@@ -32,7 +32,7 @@ func Append(key, value string) (ln int, err error) {
 }
 
 func IncrBy(key string, incrBy int64) (value int64, err error) {
-	v, ok := defaultCache.keys.Load(key)
+	v, ok := defaultCache.keys.Get(key)
 	if !ok {
 		Set(key, strconv.FormatInt(incrBy, 10))
 		return incrBy, nil
@@ -54,7 +54,7 @@ func IncrBy(key string, incrBy int64) (value int64, err error) {
 }
 
 func Get(key string) (string, error) {
-	v, ok := defaultCache.keys.Load(key)
+	v, ok := defaultCache.keys.Get(key)
 	if !ok {
 		return "", ErrNil
 	}
