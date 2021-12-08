@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/yusank/godis/debug"
-	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/redis"
 	"github.com/yusank/godis/server"
 )
@@ -20,7 +19,7 @@ func main() {
 		insertPreData()
 	}
 
-	srv := server.NewServer(addr, nil, &handler.TCPHandler{})
+	srv := server.NewServer(addr, nil)
 
 	if err := srv.Start(); err != nil {
 		log.Println("exiting: ", err)

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"errors"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -12,28 +11,25 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/yusank/godis/api"
+	"github.com/yusank/godis/protocol"
 )
 
 type Server struct {
 	addr     string
 	ctx      context.Context
 	cancel   context.CancelFunc
-	handler  api.Handler
 	listener net.Listener
 	wg       *sync.WaitGroup
-	closed   bool
 }
 
-func NewServer(addr string, ctx context.Context, h api.Handler) *Server {
+func NewServer(addr string, ctx context.Context) *Server {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
 	s := &Server{
-		addr:    addr,
-		handler: h,
-		wg:      new(sync.WaitGroup),
+		addr: addr,
+		wg:   new(sync.WaitGroup),
 	}
 
 	s.ctx, s.cancel = context.WithCancel(ctx)
@@ -70,7 +66,6 @@ func (s *Server) Start() error {
 func (s *Server) Stop() {
 	s.cancel()
 	_ = s.listener.Close()
-	s.closed = true
 }
 
 func (s *Server) handleListener() {
@@ -96,35 +91,33 @@ func (s *Server) handleListener() {
 
 // handle by a new goroutine
 func (s *Server) handleConn(conn net.Conn) {
-	defer func() {
-		_ = conn.Close()
-		s.wg.Done()
-	}()
-
 	reader := bufio.NewReader(conn)
+	ar := protocol.ReceiveDataAsync(reader)
+loop:
 	for {
-		if s.closed {
-			break
-		}
-
-		reply, err := s.handler.Handle(reader)
-		if err == io.EOF {
-			break
-		}
-
-		if err != nil {
+		// ctx
+		select {
+		case <-s.ctx.Done():
+			break loop
+		case err := <-ar.ErrorChan:
 			log.Println("handle err:", err)
-			break
-		}
+			break loop
+		case rec := <-ar.ReceiveChan:
+			rsp := handleRequest(rec)
+			reply := rsp.Encode()
 
-		if len(reply) == 0 {
-			continue
-		}
+			if len(reply) == 0 {
+				continue
+			}
 
-		_, err = conn.Write(reply)
-		if err != nil {
-			log.Println("write err:", err)
-			break
+			_, err := conn.Write(reply)
+			if err != nil {
+				log.Println("write err:", err)
+				break loop
+			}
 		}
 	}
+
+	_ = conn.Close()
+	s.wg.Done()
 }

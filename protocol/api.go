@@ -1,4 +1,4 @@
-package api
+package protocol
 
 // Reader define tcp message read api
 type Reader interface {

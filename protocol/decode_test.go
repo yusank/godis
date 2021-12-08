@@ -5,14 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"github.com/yusank/godis/api"
 )
 
 func TestDecodeFromReader(t *testing.T) {
 	tests := []struct {
 		name    string
-		args    api.Reader
+		args    Reader
 		wantRec Receive
 		wantErr bool
 	}{

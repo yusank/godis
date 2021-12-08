@@ -5,6 +5,7 @@ package redis
 func init() {
 	implementedCommands["keys"] = keys
 	implementedCommands["exists"] = exists
+	implementedCommands["del"] = del
 	implementedCommands["type"] = keyType
 	implementedCommands["ping"] = ping
 	implementedCommands["command"] = command

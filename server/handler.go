@@ -1,28 +1,24 @@
-package handler
+package server
 
 import (
 	"context"
 	"log"
 	"time"
 
-	"github.com/yusank/godis/api"
 	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/protocol"
 	"github.com/yusank/godis/redis"
 )
 
-type TCPHandler struct{}
-
-func (TCPHandler) Handle(r api.Reader) ([]byte, error) {
+// handleRequest receive protocol.Receive as params and return response
+func handleRequest(rec protocol.Receive) *protocol.Response {
 	// io data to protocol msg
-	rec, err := protocol.DecodeFromReader(r)
-	if err != nil {
-		return nil, err
+	if debug.DEBUG {
+		log.Println(rec)
 	}
-	log.Println(rec)
 
 	// set timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	// prepare cmd
@@ -41,5 +37,5 @@ func (TCPHandler) Handle(r api.Reader) ([]byte, error) {
 		log.Println("rsp:", debug.Escape(string(rsp.Encode())))
 	}
 
-	return rsp.Encode(), err
+	return rsp
 }

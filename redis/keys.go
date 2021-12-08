@@ -59,7 +59,7 @@ func keyType(c *Command) (*protocol.Response, error) {
 }
 
 func ping(c *Command) (*protocol.Response, error) {
-	time.Sleep(time.Second)
+	time.Sleep(2 * time.Second)
 	return protocol.NewResponseWithSimpleString(RespPong), nil
 }
 

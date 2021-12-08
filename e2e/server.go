@@ -6,12 +6,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/server"
 )
 
 func startServer(addr string, t *testing.T) *server.Server {
-	srv := server.NewServer(addr, nil, handler.TCPHandler{})
+	srv := server.NewServer(addr, nil)
 
 	go func() {
 		if err := srv.Start(); err != nil {

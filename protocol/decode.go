@@ -1,11 +1,12 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"strings"
-
-	"github.com/yusank/godis/api"
 )
 
 /*
@@ -32,7 +33,41 @@ func (r Receive) String() string {
 	return sb.String()
 }
 
-func DecodeFromReader(r api.Reader) (rec Receive, err error) {
+type AsyncReceive struct {
+	ReceiveChan chan Receive
+	ErrorChan   chan error
+}
+
+func ReceiveDataAsync(r Reader) *AsyncReceive {
+	var ar = &AsyncReceive{
+		ReceiveChan: make(chan Receive, 1),
+		ErrorChan:   make(chan error, 1),
+	}
+	go func() {
+		defer func() {
+			close(ar.ReceiveChan)
+			close(ar.ErrorChan)
+		}()
+
+		for {
+			rec, err := DecodeFromReader(r)
+			if err != nil {
+				ar.ErrorChan <- err
+
+				if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+					return
+				}
+				continue
+			}
+
+			ar.ReceiveChan <- rec
+		}
+	}()
+
+	return ar
+}
+
+func DecodeFromReader(r Reader) (rec Receive, err error) {
 	rec = make([]string, 0)
 	b, err := r.ReadBytes('\n')
 	if err != nil {
@@ -86,7 +121,7 @@ func decodeSingleLine(line []byte) (str string, length int, desc byte, err error
 	case DescriptionSimpleStrings, DescriptionErrors, DescriptionIntegers:
 		str = string(line[1 : len(line)-CRLFLen])
 	default:
-		return "", 0, 0, fmt.Errorf("unsupport protocol: %s", string(desc))
+		return "", 0, 0, fmt.Errorf("unsupport protocol: %s", string(line))
 	}
 
 	return
@@ -107,7 +142,7 @@ func readBulkOrArrayLength(line []byte) int {
 	return ln
 }
 
-func readBulkStrings(r api.Reader, ln int) (val []byte, err error) {
+func readBulkStrings(r Reader, ln int) (val []byte, err error) {
 	if ln < 0 {
 		return
 	}
@@ -120,7 +155,7 @@ func readBulkStrings(r api.Reader, ln int) (val []byte, err error) {
 	return
 }
 
-func readArray(r api.Reader, ln int) ([]string, error) {
+func readArray(r Reader, ln int) ([]string, error) {
 	var items []string
 	for i := 0; i < ln; i++ {
 		line, err := r.ReadBytes('\n')
