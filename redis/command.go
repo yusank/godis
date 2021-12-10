@@ -19,19 +19,14 @@ type ExecuteFunc func(*Command) (*protocol.Response, error)
 
 var implementedCommands = map[string]ExecuteFunc{}
 
-// sadd key1 value1
-// hadd key1 hkey hvalue
-// zadd key1 value1 score
-
 func NewCommandFromReceive(rec protocol.Receive) *Command {
-	c := new(Command)
-	for _, e := range rec {
-		if c.Command == "" {
-			c.Command = strings.ToLower(e)
-			continue
-		}
+	if len(rec) == 0 {
+		return nil
+	}
 
-		c.Values = append(c.Values, e)
+	c := &Command{
+		Command: strings.ToLower(rec[0]),
+		Values:  rec[1:],
 	}
 
 	return c
@@ -53,11 +48,11 @@ func (c *Command) ExecuteWithContext(ctx context.Context) chan *protocol.Respons
 	}
 
 	go func() {
-		defer func() {
-			if recover() != nil {
-				log.Println(c.Command, c.Values)
-			}
-		}()
+		//defer func() {
+		//	if recover() != nil {
+		//		log.Println(c.Command, c.Values)
+		//	}
+		//}()
 		f, ok := implementedCommands[c.Command]
 		if !ok {
 			log.Println(c.Command, c.Values)

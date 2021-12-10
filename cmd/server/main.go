@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"log"
+	"runtime"
+	"time"
 
 	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/redis"
@@ -19,6 +21,19 @@ func main() {
 	if debug.DEBUG {
 		insertPreData()
 	}
+
+	go func() {
+		if !debug.DEBUG {
+			return
+		}
+
+		for {
+			time.Sleep(10 * time.Millisecond)
+			if n := runtime.NumGoroutine(); n > 100 {
+				log.Println("Goroutine: ", n)
+			}
+		}
+	}()
 
 	srv := server.NewServer(addr, nil)
 

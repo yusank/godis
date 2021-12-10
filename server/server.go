@@ -103,9 +103,7 @@ loop:
 			//log.Println("handle err:", err)
 			break loop
 		case rec := <-ar.ReceiveChan:
-			rsp := handleRequest(rec)
-			reply := rsp.Encode()
-
+			reply := handleRequest(rec)
 			if len(reply) == 0 {
 				continue
 			}

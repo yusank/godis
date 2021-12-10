@@ -11,7 +11,7 @@ import (
 )
 
 // handleRequest receive protocol.Receive as params and return response
-func handleRequest(rec protocol.Receive) *protocol.Response {
+func handleRequest(rec protocol.Receive) []byte {
 	// io data to protocol msg
 	if debug.DEBUG {
 		log.Println(rec)
@@ -23,6 +23,10 @@ func handleRequest(rec protocol.Receive) *protocol.Response {
 
 	// prepare cmd
 	cmd := redis.NewCommandFromReceive(rec)
+	if cmd == nil {
+		return nil
+	}
+
 	rspChan := cmd.ExecuteWithContext(ctx)
 
 	// wait for result or context timeout
@@ -37,5 +41,5 @@ func handleRequest(rec protocol.Receive) *protocol.Response {
 		log.Println("rsp:", debug.Escape(string(rsp.Encode())))
 	}
 
-	return rsp
+	return rsp.Encode()
 }
