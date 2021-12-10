@@ -32,8 +32,9 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 	return c
 }
 
-// 1. check cmd is valid
-// 2. found cmd excute func
+// TODO: 尝试用一个 channel 控制所有的命令 从而避免并发带来的一些问题 https://github.com/yusank/godis/issues/10
+// 	借鉴 Redis 的时间处理器,并发接受 tcp 请求,并放入一个有序事件处理池子里, 而只有一个 worker 去处理这些事件
+// 	如果性能差太多,那考虑从加一个 key 级别的轻量级锁(原子操作),一个 key 在任何时刻只有一个worker 去读写
 
 // ExecuteWithContext is async method which return a result channel and run command ina new go routine.
 // if got any error when execution will transfer protocol bytes

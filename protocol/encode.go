@@ -2,7 +2,9 @@ package protocol
 
 import (
 	"bytes"
-	"fmt"
+	"strconv"
+
+	"github.com/yusank/godis/util"
 )
 
 /*
@@ -33,30 +35,36 @@ func NewResponse(isArray ...bool) *Response {
 
 func NewResponseWithSimpleString(str string) *Response {
 	resp := NewResponse()
-	resp.Items = append(resp.Items, &ResponseItem{
-		Value: str,
-		Type:  TypeSimpleStrings,
-	})
+	resp.Items = []*ResponseItem{
+		{
+			Value: str,
+			Type:  TypeSimpleStrings,
+		},
+	}
 
 	return resp
 }
 
 func NewResponseWithBulkString(str string) *Response {
 	resp := NewResponse()
-	resp.Items = append(resp.Items, &ResponseItem{
-		Value: str,
-		Type:  TypeBulkStrings,
-	})
+	resp.Items = []*ResponseItem{
+		{
+			Value: str,
+			Type:  TypeBulkStrings,
+		},
+	}
 
 	return resp
 }
 
 func NewResponseWithError(e error) *Response {
 	resp := NewResponse()
-	resp.Items = append(resp.Items, &ResponseItem{
-		Value: e,
-		Type:  TypeErrors,
-	})
+	resp.Items = []*ResponseItem{
+		{
+			Value: e,
+			Type:  TypeErrors,
+		},
+	}
 
 	return resp
 }
@@ -73,10 +81,12 @@ func NewResponseWithEmptyArray() *Response {
 
 func NewResponseWithInteger(i int64) *Response {
 	resp := NewResponse()
-	resp.Items = append(resp.Items, &ResponseItem{
-		Value: i,
-		Type:  TypeIntegers,
-	})
+	resp.Items = []*ResponseItem{
+		{
+			Value: i,
+			Type:  TypeIntegers,
+		},
+	}
 
 	return resp
 }
@@ -86,22 +96,24 @@ func (r *Response) SetIsArray() {
 }
 
 func (r *Response) AppendBulkInterfaces(slice ...interface{}) *Response {
-	for _, v := range slice {
-		r.Items = append(r.Items, &ResponseItem{
+	r.Items = make([]*ResponseItem, len(slice))
+	for i, v := range slice {
+		r.Items[i] = &ResponseItem{
 			Value: v,
 			Type:  TypeBulkStrings,
-		})
+		}
 	}
 
 	return r
 }
 
 func (r *Response) AppendBulkStrings(strSlice ...string) *Response {
-	for _, str := range strSlice {
-		r.Items = append(r.Items, &ResponseItem{
+	r.Items = make([]*ResponseItem, len(strSlice))
+	for i, str := range strSlice {
+		r.Items[i] = &ResponseItem{
 			Value: str,
 			Type:  TypeBulkStrings,
-		})
+		}
 	}
 
 	return r
@@ -124,7 +136,8 @@ func (r *Response) Encode() []byte {
 	}
 
 	// r.IsArray is true
-	buf.WriteString(fmt.Sprintf("*%d\r\n", len(r.Items)))
+	lnStr := strconv.Itoa(len(r.Items))
+	buf.WriteString(util.StringConcat(len(lnStr)+3, "*", lnStr, CRLF))
 	for _, item := range r.Items {
 		item.encode(buf)
 	}
@@ -139,17 +152,21 @@ func (ri *ResponseItem) encode(buf *bytes.Buffer) {
 
 	switch ri.Type {
 	case TypeSimpleStrings:
-		_, _ = buf.WriteString(fmt.Sprintf("+%s\r\n", ri.Value.(string)))
+		str := ri.Value.(string)
+		_, _ = buf.WriteString(util.StringConcat(len(str)+3, "+", str, CRLF))
 	case TypeErrors:
-		_, _ = buf.WriteString(fmt.Sprintf("-%s\r\n", ri.Value.(error).Error()))
+		str := ri.Value.(error).Error()
+		_, _ = buf.WriteString(util.StringConcat(len(str)+3, "-", str, CRLF))
 	case TypeIntegers:
-		_, _ = buf.WriteString(fmt.Sprintf(":%d\r\n", ri.Value.(int64)))
+		str := strconv.FormatInt(ri.Value.(int64), 10)
+		_, _ = buf.WriteString(util.StringConcat(len(str)+3, ":", str, CRLF))
 	case TypeBulkStrings:
 		if ri.Value == nil {
 			_, _ = buf.WriteString("$-1\r\n")
 			break
 		}
 		str := ri.Value.(string)
-		_, _ = buf.WriteString(fmt.Sprintf("$%d\r\n%s\r\n", len(str), str))
+		lnStr := strconv.Itoa(len(str))
+		_, _ = buf.WriteString(util.StringConcat(len(str)+len(lnStr)+5, "$", lnStr, CRLF, str, CRLF))
 	}
 }

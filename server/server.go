@@ -81,7 +81,7 @@ func (s *Server) handleListener() {
 			continue
 		}
 
-		log.Println("new conn from:", conn.RemoteAddr().String())
+		//log.Println("new conn from:", conn.RemoteAddr().String())
 		s.wg.Add(1)
 		go s.handleConn(conn)
 	}

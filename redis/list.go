@@ -47,13 +47,7 @@ func lPop(c *Command) (*protocol.Response, error) {
 		return nil, err
 	}
 
-	rsp := protocol.NewResponse()
-	rsp.AppendBulkStrings(values...)
-	if len(values) > 0 {
-		rsp.SetIsArray()
-	}
-
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
 
 // rPush .
@@ -95,12 +89,7 @@ func rPop(c *Command) (*protocol.Response, error) {
 		return nil, err
 	}
 
-	rsp := protocol.NewResponse()
-	rsp.AppendBulkStrings(values...)
-	if len(values) > 0 {
-		rsp.SetIsArray()
-	}
-	return rsp, nil
+	return protocol.NewResponse(true).AppendBulkStrings(values...), nil
 }
 
 // lLen .

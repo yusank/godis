@@ -3,6 +3,7 @@ module github.com/yusank/godis
 go 1.17
 
 require (
+	github.com/pkg/profile v1.6.0
 	github.com/stretchr/testify v1.7.0
 	github.com/yusank/concurrent-map v1.1.0
 	github.com/yusank/glob v0.3.0

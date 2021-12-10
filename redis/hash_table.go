@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/yusank/godis/datastruct"
@@ -52,8 +51,17 @@ func hGet(c *Command) (*protocol.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	var res string
+	switch vv := v.(type) {
+	case string:
+		res = vv
+	case int64:
+		res = strconv.FormatInt(vv, 10)
+	case float64:
+		res = strconv.FormatFloat(vv, 'g', -1, 64)
+	}
 
-	return protocol.NewResponseWithBulkString(fmt.Sprintf("%v", v)), nil
+	return protocol.NewResponseWithBulkString(res), nil
 }
 
 // hGetAll .
