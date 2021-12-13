@@ -1,6 +1,7 @@
 MSG=$(msg)
 IMAGE ?= yusank/godis
 TAG ?= latests
+BUILDTAGS=$(build_tags)
 help:  ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[0-9A-Za-z_-]+:.*?##/ { printf "  \033[36m%-45s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 .PHONY: server-run
@@ -34,4 +35,4 @@ clean: ## clean all generated code
 
 .PHONEY: docker-build
 docker-build: ## build docker image
-	docker build -t $(IMAGE):$(TAG) .
+	docker build --build-arg build_tags=$(BUILDTAGS) -t $(IMAGE):$(TAG) .
