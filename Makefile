@@ -1,4 +1,6 @@
 MSG=$(msg)
+IMAGE ?= yusank/godis
+TAG ?= latests
 help:  ## Display this help
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[0-9A-Za-z_-]+:.*?##/ { printf "  \033[36m%-45s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 .PHONY: server-run
@@ -29,3 +31,7 @@ gen_cmd: ## gen redis cmd code
 .PHONEY: clean
 clean: ## clean all generated code
 	rm -rf redis/*.cmd.go
+
+.PHONEY: docker-build
+docker-build: ## build docker image
+	docker build -t $(IMAGE):$(TAG) .
