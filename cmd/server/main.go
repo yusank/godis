@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"runtime"
 
 	"github.com/panjf2000/gnet/pkg/pool/goroutine"
 
@@ -16,11 +17,13 @@ import (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	defer func() {
 		for _, f := range deferred {
 			f()
 		}
 	}()
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var addr string
 	flag.StringVar(&addr, "addr", "tcp://:7379", "server address")
