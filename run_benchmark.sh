@@ -20,7 +20,7 @@ echo "benchNum: $benchNum"
 # step 2: run
 day=$(date +%Y%m%d)
 filePath=benchmark/benchmark.$day.csv
-redis-benchmark -p 7379 -c 100 -n 10000 -q --csv > $filePath 
+redis-benchmark -p 7379 -c $clientNum -n $benchNum -q --csv > $filePath
 
 # step 3: open file
 open $filePath
