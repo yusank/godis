@@ -5,7 +5,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/yusank/godis/config"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -20,7 +19,7 @@ type ExecuteFunc func(*Command) (*protocol.Response, error)
 
 var implementedCommands = map[string]ExecuteFunc{}
 
-func NewCommandFromReceive(rec protocol.Receive) *Command {
+func NewCommandFromReceive(ctx context.Context, rec protocol.Receive) *Command {
 	if len(rec) == 0 {
 		return nil
 	}
@@ -37,23 +36,15 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 // 	借鉴 Redis 的时间处理器,并发接受 tcp 请求,并放入一个有序事件处理池子里, 而只有一个 worker 去处理这些事件
 // 	如果性能差太多,那考虑从加一个 key 级别的轻量级锁(原子操作),一个 key 在任何时刻只有一个worker 去读写
 
-// ExecuteWithContext is async method which return a result channel and run command ina new go routine.
+// ExecuteAsync is async method which return a result channel and run command ina new go routine.
 // if got any error when execution will transfer protocol bytes
-func (c *Command) ExecuteWithContext(ctx context.Context) *protocol.Response {
+func (c *Command) ExecuteAsync() chan *protocol.Response {
 	var (
-		rsp  = new(protocol.Response)
-		done = make(chan struct{})
+		rspChan = make(chan *protocol.Response)
 	)
 
-	c.Ctx = ctx
-	if c.Ctx == nil {
-		var cancel context.CancelFunc
-		c.Ctx, cancel = context.WithTimeout(context.Background(), config.GetDefaultTimeout())
-		defer cancel()
-	}
-
 	go func() {
-		defer close(done)
+		defer close(rspChan)
 		//defer func() {
 		//	if recover() != nil {
 		//		log.Println(c.Command, c.Values)
@@ -61,37 +52,34 @@ func (c *Command) ExecuteWithContext(ctx context.Context) *protocol.Response {
 		//}()
 		f, ok := implementedCommands[c.Command]
 		if !ok {
-			c.setRsp(nil, ErrUnknownCommand, &rsp)
+			c.setRsp(nil, ErrUnknownCommand, rspChan)
 			return
 		}
 
 		result, err := f(c)
-		c.setRsp(result, err, &rsp)
+		c.setRsp(result, err, rspChan)
 	}()
 
-	<-done
-	return rsp
+	return rspChan
 }
 
-func (c *Command) setRsp(result *protocol.Response, err error, rsp **protocol.Response) {
-	if rsp == nil || *rsp == nil {
-		return
-	}
+func (c *Command) setRsp(result *protocol.Response, err error, ch chan *protocol.Response) {
 	// if ctx has error won't put
 	if c.Ctx != nil && c.Ctx.Err() != nil {
 		return
 	}
 
 	if err != nil {
-		*rsp = protocol.NewResponseWithError(err)
+		ch <- protocol.NewResponseWithError(err)
 		return
 	}
 
 	if result == nil {
+		ch <- protocol.NewResponseWithNilBulk()
 		return
 	}
 
-	*rsp = result
+	ch <- result
 }
 
 // PrintSupportedCmd call on debug mode

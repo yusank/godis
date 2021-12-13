@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"log"
 )
 
@@ -26,10 +25,10 @@ func (w *worker) run() {
 			return
 		case e := <-w.ep.eventChan:
 			if e == nil {
-				continue
+				return
 			}
 
-			e.Rsp = e.Cmd.ExecuteWithContext(context.Background())
+			e.Rsp = <-e.Cmd.ExecuteAsync()
 			close(e.done)
 		}
 	}

@@ -70,7 +70,7 @@ func insertPreData() {
 			Values:  datum[1:],
 		}
 
-		c.ExecuteWithContext(context.TODO())
+		c.ExecuteAsync()
 	}
 
 	log.Println("data prepared")

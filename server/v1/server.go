@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/yusank/godis/event"
-	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -115,7 +114,7 @@ loop:
 			//log.Println("handle err:", err)
 			break loop
 		case rec := <-ar.ReceiveChan:
-			reply := handler.HandleRequest(rec)
+			reply := event.HandleRequest(rec)
 			if len(reply) == 0 {
 				continue
 			}

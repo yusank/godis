@@ -1,4 +1,4 @@
-package handler
+package event
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/yusank/godis/debug"
-	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 	"github.com/yusank/godis/redis"
 )
@@ -23,14 +22,14 @@ func HandleRequest(rec protocol.Receive) []byte {
 	defer cancel()
 
 	// prepare cmd
-	cmd := redis.NewCommandFromReceive(rec)
+	cmd := redis.NewCommandFromReceive(ctx, rec)
 	if cmd == nil {
 		return nil
 	}
 
 	// event handler handle event one by one
-	e := event.NewEvent(cmd)
-	event.AddEvent(e)
+	e := NewEvent(cmd)
+	AddEvent(e)
 
 	// wait for result or context timeout
 	var rsp *protocol.Response

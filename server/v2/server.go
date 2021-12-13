@@ -9,7 +9,6 @@ import (
 	"github.com/panjf2000/gnet/pkg/pool/goroutine"
 
 	"github.com/yusank/godis/event"
-	"github.com/yusank/godis/handler"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -50,7 +49,7 @@ func (s *Server) React(frame []byte, c gnet.Conn) (out []byte, action gnet.Actio
 			return
 		}
 
-		reply := handler.HandleRequest(rec)
+		reply := event.HandleRequest(rec)
 		if len(reply) == 0 {
 			return
 		}
