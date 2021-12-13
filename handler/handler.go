@@ -1,4 +1,4 @@
-package server
+package handler
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"github.com/yusank/godis/redis"
 )
 
-// handleRequest receive protocol.Receive as params and return response
-func handleRequest(rec protocol.Receive) []byte {
+// HandleRequest receive protocol.Receive as params and return response
+func HandleRequest(rec protocol.Receive) []byte {
 	// io data to protocol msg
 	if debug.DEBUG {
 		log.Println(rec)

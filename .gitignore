@@ -1,4 +1,3 @@
 .vscode
 .idea
-go_build_server
-go_build_gen_redis_cmd
+go_build_*

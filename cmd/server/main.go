@@ -2,44 +2,57 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
-	"runtime"
-	"time"
+
+	"github.com/panjf2000/gnet/pkg/pool/goroutine"
 
 	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/redis"
 	"github.com/yusank/godis/server"
+	v1 "github.com/yusank/godis/server/v1"
+	v2 "github.com/yusank/godis/server/v2"
 )
 
 func main() {
+	defer func() {
+		for _, f := range deferred {
+			f()
+		}
+	}()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	var addr string
-	flag.StringVar(&addr, "addr", ":7379", "server address")
+	flag.StringVar(&addr, "addr", "tcp://:7379", "server address")
 	flag.Parse()
+
+	log.Printf("addr:%s, debug:%t, version:%s\n", addr, debug.DEBUG, server.Version)
 
 	if debug.DEBUG {
 		insertPreData()
 	}
 
-	go func() {
-		if !debug.DEBUG {
-			return
-		}
-
-		for {
-			time.Sleep(10 * time.Millisecond)
-			if n := runtime.NumGoroutine(); n > 100 {
-				log.Println("Goroutine: ", n)
-			}
-		}
-	}()
-
-	srv := server.NewServer(addr, nil)
-
-	if err := srv.Start(); err != nil {
+	if err := run(addr, server.Version); err != nil {
 		log.Println("exiting: ", err)
 	}
+}
+
+var deferred = make([]func(), 0)
+
+func run(addr string, version string) error {
+	var srv server.IServer
+	switch version {
+	case "v1":
+		srv = v1.NewServer()
+	case "v2":
+		p := goroutine.Default()
+		deferred = append(deferred, p.Release)
+		srv = v2.NewServer(p)
+	default:
+		return errors.New("unknown server version")
+	}
+
+	return srv.Start(context.Background(), addr)
 }
 
 var prepareData = [][]string{
