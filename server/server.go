@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -47,9 +48,12 @@ func (s *Server) Start() error {
 	log.Println("listen: ", l.Addr())
 	s.listener = l
 
+	s.wg.Add(1)
 	go func() {
+		defer s.wg.Done()
 		select {
 		case <-s.ctx.Done():
+			//s.Stop()
 			log.Println("kill by ctx")
 			return
 		case sig := <-sigChan:
@@ -66,6 +70,7 @@ func (s *Server) Start() error {
 func (s *Server) Stop() {
 	s.cancel()
 	_ = s.listener.Close()
+	event.Stop()
 }
 
 func (s *Server) handleListener() {

@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/yusank/godis/config"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -38,17 +39,21 @@ func NewCommandFromReceive(rec protocol.Receive) *Command {
 
 // ExecuteWithContext is async method which return a result channel and run command ina new go routine.
 // if got any error when execution will transfer protocol bytes
-func (c *Command) ExecuteWithContext(ctx context.Context) chan *protocol.Response {
+func (c *Command) ExecuteWithContext(ctx context.Context) *protocol.Response {
 	var (
-		rspChan = make(chan *protocol.Response, 1)
+		rsp  = new(protocol.Response)
+		done = make(chan struct{})
 	)
 
 	c.Ctx = ctx
 	if c.Ctx == nil {
-		c.Ctx = context.Background()
+		var cancel context.CancelFunc
+		c.Ctx, cancel = context.WithTimeout(context.Background(), config.GetDefaultTimeout())
+		defer cancel()
 	}
 
 	go func() {
+		defer close(done)
 		//defer func() {
 		//	if recover() != nil {
 		//		log.Println(c.Command, c.Values)
@@ -56,31 +61,37 @@ func (c *Command) ExecuteWithContext(ctx context.Context) chan *protocol.Respons
 		//}()
 		f, ok := implementedCommands[c.Command]
 		if !ok {
-			log.Println(c.Command, c.Values)
-			c.putRspToChan(rspChan, protocol.NewResponseWithError(ErrUnknownCommand))
+			c.setRsp(nil, ErrUnknownCommand, &rsp)
 			return
 		}
 
-		rsp, err := f(c)
-		if err != nil {
-			log.Println(c.Command)
-			c.putRspToChan(rspChan, protocol.NewResponseWithError(err))
-			return
-		}
-
-		c.putRspToChan(rspChan, rsp)
+		result, err := f(c)
+		c.setRsp(result, err, &rsp)
 	}()
 
-	return rspChan
+	<-done
+	return rsp
 }
 
-func (c *Command) putRspToChan(ch chan *protocol.Response, rsp *protocol.Response) {
+func (c *Command) setRsp(result *protocol.Response, err error, rsp **protocol.Response) {
+	if rsp == nil || *rsp == nil {
+		return
+	}
 	// if ctx has error won't put
 	if c.Ctx != nil && c.Ctx.Err() != nil {
 		return
 	}
 
-	ch <- rsp
+	if err != nil {
+		*rsp = protocol.NewResponseWithError(err)
+		return
+	}
+
+	if result == nil {
+		return
+	}
+
+	*rsp = result
 }
 
 // PrintSupportedCmd call on debug mode

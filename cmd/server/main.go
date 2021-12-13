@@ -57,7 +57,7 @@ func insertPreData() {
 			Values:  datum[1:],
 		}
 
-		<-c.ExecuteWithContext(context.TODO())
+		c.ExecuteWithContext(context.TODO())
 	}
 
 	log.Println("data prepared")

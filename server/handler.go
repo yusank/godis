@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/yusank/godis/debug"
+	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 	"github.com/yusank/godis/redis"
 )
@@ -27,14 +28,17 @@ func handleRequest(rec protocol.Receive) []byte {
 		return nil
 	}
 
-	rspChan := cmd.ExecuteWithContext(ctx)
+	// event handler handle event one by one
+	e := event.NewEvent(cmd)
+	event.AddEvent(e)
 
 	// wait for result or context timeout
 	var rsp *protocol.Response
 	select {
 	case <-ctx.Done():
 		rsp = protocol.NewResponseWithError(ctx.Err())
-	case rsp = <-rspChan:
+	case <-e.Done():
+		rsp = e.Rsp
 	}
 
 	if debug.DEBUG {

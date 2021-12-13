@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -14,6 +15,7 @@ var (
 
 func Test_SimpleString(t *testing.T) {
 	srv := startServer(debugAddr, t)
+	event.SetGlobalEventPool(event.NewEventPool())
 
 	msg := protocol.NewResponseWithSimpleString("PING")
 	err := connAndSendMsg(debugAddr, msg)
@@ -23,6 +25,7 @@ func Test_SimpleString(t *testing.T) {
 
 func Test_BulkString(t *testing.T) {
 	srv := startServer(debugAddr, t)
+	event.SetGlobalEventPool(event.NewEventPool())
 
 	rsp := protocol.NewResponse().AppendBulkInterfaces("GET")
 	err := connAndSendMsg(debugAddr, rsp)
@@ -32,6 +35,7 @@ func Test_BulkString(t *testing.T) {
 
 func Test_Array(t *testing.T) {
 	srv := startServer(debugAddr, t)
+	event.SetGlobalEventPool(event.NewEventPool())
 
 	rsp := protocol.NewResponse().AppendBulkInterfaces("MEGT", "key1")
 	err := connAndSendMsg(debugAddr, rsp)
