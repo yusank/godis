@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log"
+	"time"
 
 	"github.com/panjf2000/gnet"
 	"github.com/panjf2000/gnet/pkg/pool/goroutine"
@@ -28,13 +29,15 @@ func NewServer(p *goroutine.Pool) *Server {
 func (s *Server) Start(addr string) error {
 	s.addr = addr
 	log.Println("listen: ", addr)
-	return gnet.Serve(s, addr, gnet.WithMulticore(true))
+	return gnet.Serve(s, addr, gnet.WithMulticore(true), gnet.WithReusePort(true))
 }
 
-func (s *Server) Stop(ctx context.Context) {
+func (s *Server) Stop() {
 	log.Println("graceful shutting down...")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
 	if err := gnet.Stop(ctx, s.addr); err != nil {
-		log.Println("stop fail with err:", err)
+		log.Println("stop with err:", err)
 	}
 }
 

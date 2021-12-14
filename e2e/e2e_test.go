@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +19,7 @@ func Test_e2e(t *testing.T) {
 	e2eBulkString(t)
 	e2eArray(t)
 
-	srv.Stop(context.Background())
+	srv.Stop()
 }
 
 func e2eSimpleString(t *testing.T) {

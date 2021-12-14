@@ -1,3 +1,6 @@
+//go:build v1
+// +build v1
+
 package v1
 
 import (
@@ -14,16 +17,15 @@ import (
 )
 
 // Server provide tcp server based on go native net package
-// Deprecated
 type Server struct {
 	addr     string
 	ctx      context.Context
+	cancel   context.CancelFunc
 	listener net.Listener
 	wg       *sync.WaitGroup
 }
 
 // NewServer return new Server
-// Deprecated
 func NewServer() *Server {
 	return &Server{
 		wg: new(sync.WaitGroup),
@@ -32,16 +34,12 @@ func NewServer() *Server {
 }
 
 // Start a new Server
-// Deprecated
-func (s *Server) Start(ctx context.Context, addr string) error {
+func (s *Server) Start(addr string) error {
 	// addr
 	s.addr = strings.TrimPrefix(addr, "tcp://")
 
 	// ctx
-	s.ctx = ctx
-	if ctx == nil {
-		s.ctx = context.Background()
-	}
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 
 	// listen
 	l, err := net.Listen("tcp", s.addr)
@@ -58,15 +56,17 @@ func (s *Server) Start(ctx context.Context, addr string) error {
 }
 
 // Stop the Server
-// Deprecated
-func (s *Server) Stop(_ context.Context) {
+func (s *Server) Stop() {
+	// stop accept new connection
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
+	// stop handle new request from old connection
 	event.Stop()
+	// quit old connection loop
+	s.cancel()
 }
 
-// Deprecated
 func (s *Server) handleListener() {
 	for {
 		conn, err := s.listener.Accept()
@@ -89,7 +89,6 @@ func (s *Server) handleListener() {
 }
 
 // handle by a new goroutine
-// Deprecated
 func (s *Server) handleConn(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	ar := protocol.ReceiveDataAsync(reader)

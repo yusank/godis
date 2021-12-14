@@ -3,19 +3,20 @@ package datastruct
 // keys file put functions for key operation
 
 import (
-	cm "github.com/yusank/concurrent-map"
 	"github.com/yusank/glob"
+
+	smap "github.com/yusank/godis/lib/shard_map"
 )
 
 var defaultCache = newMemoryCache()
 
 // MemoryCache 总数结构
 type MemoryCache struct {
-	keys cm.ConcurrentMap
+	keys smap.Map
 }
 
 func newMemoryCache() *MemoryCache {
-	return &MemoryCache{keys: cm.New()}
+	return &MemoryCache{keys: smap.New()}
 }
 
 type KeyInfo struct {
@@ -60,7 +61,7 @@ func Type(key string) (kt KeyType, found bool) {
 
 func Keys(pattern string) (keys []string) {
 	g := glob.MustCompile(pattern)
-	defaultCache.keys.RangeCb(func(key string, _ interface{}) bool {
+	defaultCache.keys.Range(func(key string, _ interface{}) bool {
 		if g.Match(key) {
 			keys = append(keys, key)
 		}
@@ -71,9 +72,7 @@ func Keys(pattern string) (keys []string) {
 }
 
 func Del(key string) int {
-	remove := defaultCache.keys.RemoveCb(key, func(key string, v interface{}, exists bool) bool {
-		return exists
-	})
+	remove := defaultCache.keys.DeleteIfExists(key)
 
 	if remove {
 		return 1

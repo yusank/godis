@@ -1,20 +1,17 @@
 package datastruct
 
 import (
-	"sync"
-
-	cm "github.com/yusank/concurrent-map"
+	smap "github.com/yusank/godis/lib/shard_map"
 )
 
 type set struct {
-	// m is a concurrentMap use as hash map and store set member as key
-	m      cm.ConcurrentMap
+	m      smap.Map
 	length int
 }
 
 func newSet() *set {
 	return &set{
-		m: cm.New(),
+		m: smap.New(),
 	}
 }
 
@@ -27,16 +24,10 @@ func (s *set) sAdd(key string) int {
 	return 0
 }
 
-func (s *set) sIsMember(key string) bool {
-	return s.m.Has(key)
-}
-
 func (s *set) sRem(key string) int {
-	remove := s.m.RemoveCb(key, func(_ string, _ interface{}, exists bool) bool {
-		return exists
-	})
+	exists := s.m.DeleteIfExists(key)
 
-	if remove {
+	if exists {
 		s.length--
 		return 1
 	}
@@ -47,23 +38,28 @@ func (s *set) sRem(key string) int {
 func (s *set) sPop(cnt int) []string {
 	var (
 		result []string
-		ch     = s.m.IterBuffered()
 	)
-	for i := 0; i < cnt; i++ {
-		item := <-ch
-		s.sRem(item.Key)
-		result = append(result, item.Key)
-	}
+	s.m.RangeAndDelete(func(key string, value interface{}) (del, rng bool) {
+		if cnt <= 0 {
+			return false, false
+		}
+
+		result = append(result, key)
+		cnt--
+		return true, true
+	})
 
 	return result
 }
 
 func sDiff(s1, s2 *set) *set {
 	var result = newSet()
-	s1.m.IterCb(func(key string, _ interface{}) {
+	s1.m.Range(func(key string, _ interface{}) bool {
 		if !s2.m.Has(key) {
 			result.sAdd(key)
 		}
+
+		return true
 	})
 
 	return result
@@ -71,10 +67,12 @@ func sDiff(s1, s2 *set) *set {
 
 func sInter(s1, s2 *set) *set {
 	var result = newSet()
-	s1.m.IterCb(func(key string, _ interface{}) {
+	s1.m.Range(func(key string, _ interface{}) bool {
 		if s2.m.Has(key) {
 			result.sAdd(key)
 		}
+
+		return true
 	})
 
 	return result
@@ -83,9 +81,11 @@ func sInter(s1, s2 *set) *set {
 func sUnion(sets ...*set) *set {
 	var result = newSet()
 	for _, s := range sets {
-		s.m.IterCb(func(key string, _ interface{}) {
+		s.m.Range(func(key string, _ interface{}) bool {
 			result.sAdd(key)
+			return true
 		})
+
 	}
 
 	return result
@@ -185,10 +185,8 @@ func SMove(source, target, value string) (int, error) {
 		return 0, err
 	}
 
-	loaded := sset.m.RemoveCb(value, func(_ string, _ interface{}, exists bool) bool {
-		return exists
-	})
-	if !loaded {
+	exists := sset.m.DeleteIfExists(value)
+	if !exists {
 		// not exist
 		return 0, ErrNil
 	}
@@ -370,39 +368,94 @@ func SPop(key string, cnt int) ([]string, error) {
  * compare with sync map
  * just for compare, not using in any data struct
  */
+//
+//type setSyncMap struct {
+//	m      sync.Map
+//	length int
+//}
+//
+//func newSetSyncMap() *setSyncMap {
+//	return &setSyncMap{
+//		m: sync.Map{},
+//	}
+//}
+//
+//func (s *setSyncMap) sAdd(key string) int {
+//	_, loaded := s.m.LoadOrStore(key, 0)
+//	if loaded {
+//		return 0
+//	}
+//
+//	s.length++
+//	return 1
+//}
+//
+//func (s *setSyncMap) sIsMember(key string) bool {
+//	_, found := s.m.Load(key)
+//	return found
+//}
+//
+//func (s *setSyncMap) sRem(key string) int {
+//	_, loaded := s.m.LoadAndDelete(key)
+//	if loaded {
+//		s.length--
+//		return 1
+//	}
+//
+//	return 0
+//}
 
-type setSyncMap struct {
-	m      sync.Map
-	length int
-}
-
-func newSetSyncMap() *setSyncMap {
-	return &setSyncMap{
-		m: sync.Map{},
-	}
-}
-
-func (s *setSyncMap) sAdd(key string) int {
-	_, loaded := s.m.LoadOrStore(key, 0)
-	if loaded {
-		return 0
-	}
-
-	s.length++
-	return 1
-}
-
-func (s *setSyncMap) sIsMember(key string) bool {
-	_, found := s.m.Load(key)
-	return found
-}
-
-func (s *setSyncMap) sRem(key string) int {
-	_, loaded := s.m.LoadAndDelete(key)
-	if loaded {
-		s.length--
-		return 1
-	}
-
-	return 0
-}
+// use shardMap as example
+//
+//type setNonLockMap struct {
+//	m      Map
+//	length int
+//}
+//
+//func newSetNonLockMap() *setNonLockMap {
+//	return &setNonLockMap{
+//		m: NewMap(),
+//	}
+//}
+//
+//func (s *setNonLockMap) sAdd(key string) int {
+//	absent := s.m.SetIfAbsent(key, 0)
+//	if !absent {
+//		return 0
+//	}
+//
+//	s.length++
+//	return 1
+//}
+//
+//func (s *setNonLockMap) sIsMember(key string) bool {
+//	_, found := s.m.Get(key)
+//	return found
+//}
+//
+//func (s *setNonLockMap) sRem(key string) int {
+//	exists := s.m.DeleteIfExists(key)
+//	if exists {
+//		s.length--
+//		return 1
+//	}
+//
+//	return 0
+//}
+//
+//func (s *setNonLockMap) sPop(cnt int) []string {
+//	var (
+//		result []string
+//	)
+//	s.m.RangeAndDelete(func(key string, value interface{}) (del, rng bool) {
+//		if cnt <= 0 {
+//			return false, false
+//		}
+//
+//		result = append(result, key)
+//		cnt--
+//		return true, true
+//	})
+//
+//	return result
+//}

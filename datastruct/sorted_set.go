@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	cm "github.com/yusank/concurrent-map"
+	smap "github.com/yusank/godis/lib/shard_map"
 )
 
 // sortedSet implement via skip list
 
 // zSet is object contain skip list and map which store key-value pair
 type zSet struct {
-	m cm.ConcurrentMap // store key and value
+	m smap.Map // store key and value
 	// 在元素少于 100 & 每个元素大小小于 64 的时候,Redis 实际上用的是 zipList 这里作为知识点提了一下
 	// 	除非遇到性能问题,否则不准备同时支持 zipList 和 skipList
 	zsl *zSkipList // skip list
@@ -23,7 +23,7 @@ type zSet struct {
 
 func newZSet() *zSet {
 	return &zSet{
-		m:   cm.New(),
+		m:   smap.New(),
 		zsl: newZSkipList(),
 	}
 }
@@ -564,20 +564,12 @@ func (zs *zSet) loadDictEntry(key string) *dictEntry {
 }
 
 func (zs *zSet) loadAndDeleteDictEntry(key string) *dictEntry {
-	var d *dictEntry
-	remove := zs.m.RemoveCb(key, func(key string, v interface{}, exists bool) bool {
-		if !exists {
-			return exists
-		}
-
-		d = v.(*dictEntry)
-		return exists
-	})
-	if !remove {
+	v, loaded := zs.m.LoadAndDelete(key)
+	if !loaded {
 		return nil
 	}
 
-	return d
+	return v.(*dictEntry)
 }
 
 /*

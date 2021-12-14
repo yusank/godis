@@ -26,8 +26,6 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.com/yusank/concurrent-map v1.1.0 h1:lDHxCdnrbl0Wk8RCMSdxCSDqXIOo85nmWfqTcvErZRU=
-github.com/yusank/concurrent-map v1.1.0/go.mod h1:066HVtZmuxZoaqHiqofEbzhKuCFZSzcFSiw7JzwhUXQ=
 github.com/yusank/glob v0.3.0 h1:bbAoWxHx710ZdGKrC4hq6/SycMefqBhGn/2bERM7zUM=
 github.com/yusank/glob v0.3.0/go.mod h1:ALNfSFonrfDwgSGwf/2zvoeT/q7aLRI7PHSX0A3X8Uk=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=

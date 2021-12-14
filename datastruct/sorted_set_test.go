@@ -42,19 +42,19 @@ func Test_zslRandomLevel(t *testing.T) {
 }
 */
 
-func Benchmark_zslRandomLevel(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		zslRandomLevel()
-	}
-	/*
-	* goos: darwin
-	* goarch: amd64
-	* pkg: github.com/yusank/godis/datastruct
-	* cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
-	* Benchmark_zslRandomLevel
-	* Benchmark_zslRandomLevel-12    	43659864	        27.17 ns/op
-	 */
-}
+//func Benchmark_zslRandomLevel(b *testing.B) {
+//	for i := 0; i < b.N; i++ {
+//		zslRandomLevel()
+//	}
+//	/*
+//	* goos: darwin
+//	* goarch: amd64
+//	* pkg: github.com/yusank/godis/datastruct
+//	* cpu: Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz
+//	* Benchmark_zslRandomLevel
+//	* Benchmark_zslRandomLevel-12    	43659864	        27.17 ns/op
+//	 */
+//}
 
 func Test_zSkipList_rank(t *testing.T) {
 	type args struct {

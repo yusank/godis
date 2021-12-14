@@ -3,11 +3,11 @@ package datastruct
 import (
 	"strconv"
 
-	cm "github.com/yusank/concurrent-map"
+	smap "github.com/yusank/godis/lib/shard_map"
 )
 
 type hashTable struct {
-	table  cm.ConcurrentMap
+	table  smap.Map
 	length int
 }
 
@@ -19,15 +19,12 @@ type KV struct {
 
 func newHashTable() *hashTable {
 	return &hashTable{
-		table: cm.New(),
+		table: smap.New(),
 	}
 }
 
 func (h *hashTable) del(field string) int {
-	remove := !h.table.RemoveCb(field, func(_ string, _ interface{}, exists bool) bool {
-		return exists
-	})
-
+	remove := !h.table.DeleteIfExists(field)
 	if remove {
 		h.length--
 		return 1
@@ -68,51 +65,47 @@ func (h *hashTable) getAll() map[string]interface{} {
 }
 
 func (h *hashTable) incrBy(field string, i int64) (int64, error) {
-	res := h.table.Upsert(field, i, func(exist bool, valueInMap interface{}, newValue interface{}) interface{} {
+	res, abort := h.table.Upsert(field, i, func(exist bool, valueInMap interface{}, newValue interface{}) (interface{}, bool) {
 		if !exist {
-			return i
+			return i, false
 		}
 
 		i64, ok := valueInMap.(int64)
 		if !ok {
-			return ErrNotInteger
+			return ErrNotInteger, true
 		}
 
-		return i64 + newValue.(int64)
+		return i64 + newValue.(int64), false
 	})
 
-	switch v := res.(type) {
-	case error:
-		return 0, v
-	case int64:
-		return v, nil
+	if abort {
+		// return true only return error
+		return 0, res.(error)
 	}
 
-	return 0, nil
+	return res.(int64), nil
 }
 
 func (h *hashTable) incrByFloat(field string, i float64) (float64, error) {
-	res := h.table.Upsert(field, i, func(exist bool, valueInMap interface{}, newValue interface{}) interface{} {
+	res, abort := h.table.Upsert(field, i, func(exist bool, valueInMap interface{}, newValue interface{}) (interface{}, bool) {
 		if !exist {
-			return i
+			return i, false
 		}
 
 		i64, ok := valueInMap.(float64)
 		if !ok {
-			return ErrNotFloat
+			return ErrNotFloat, true
 		}
 
-		return i64 + newValue.(float64)
+		return i64 + newValue.(float64), false
 	})
 
-	switch v := res.(type) {
-	case error:
-		return 0, v
-	case float64:
-		return v, nil
+	if abort {
+		// return true only return error
+		return 0, res.(error)
 	}
 
-	return 0, nil
+	return res.(float64), nil
 }
 
 func (h *hashTable) keys() []string {
@@ -149,9 +142,9 @@ func (h *hashTable) mSet(kvs []*KV) {
 
 func (h *hashTable) values() []string {
 	var result []string
-	for item := range h.table.IterBuffered() {
+	h.table.Range(func(_ string, value interface{}) bool {
 		var vStr string
-		switch v := item.Val.(type) {
+		switch v := value.(type) {
 		case string:
 			vStr = v
 		case int64:
@@ -160,8 +153,10 @@ func (h *hashTable) values() []string {
 			vStr = strconv.FormatFloat(v, 'g', -1, 64)
 		}
 		result = append(result, vStr)
-	}
 
+		return true
+	})
+	
 	return result
 }
 

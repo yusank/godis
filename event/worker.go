@@ -20,7 +20,6 @@ func newWorker(ep *EventPool) *worker {
 func (w *worker) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Println("worker start")
 	for {
 		select {
 		case <-w.done:
