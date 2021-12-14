@@ -1,6 +1,8 @@
 package redis
 
 import (
+	"time"
+
 	"github.com/yusank/godis/datastruct"
 	"github.com/yusank/godis/protocol"
 )
@@ -57,6 +59,7 @@ func keyType(c *Command) (*protocol.Response, error) {
 }
 
 func ping(c *Command) (*protocol.Response, error) {
+	time.Sleep(2 * time.Second)
 	return protocol.NewResponseWithSimpleString(RespPong), nil
 }
 

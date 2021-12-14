@@ -1,11 +1,11 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 )
 
@@ -13,32 +13,30 @@ var (
 	debugAddr = ":7379"
 )
 
-func Test_SimpleString(t *testing.T) {
+func Test_e2e(t *testing.T) {
 	srv := startServer(debugAddr, t)
-	event.SetGlobalEventPool(event.NewEventPool())
 
+	e2eSimpleString(t)
+	e2eBulkString(t)
+	e2eArray(t)
+
+	srv.Stop(context.Background())
+}
+
+func e2eSimpleString(t *testing.T) {
 	msg := protocol.NewResponseWithSimpleString("PING")
 	err := connAndSendMsg(debugAddr, msg)
 	assert.NoError(t, err)
-	srv.Stop()
 }
 
-func Test_BulkString(t *testing.T) {
-	srv := startServer(debugAddr, t)
-	event.SetGlobalEventPool(event.NewEventPool())
-
+func e2eBulkString(t *testing.T) {
 	rsp := protocol.NewResponse().AppendBulkInterfaces("GET")
 	err := connAndSendMsg(debugAddr, rsp)
 	assert.NoError(t, err)
-	srv.Stop()
 }
 
-func Test_Array(t *testing.T) {
-	srv := startServer(debugAddr, t)
-	event.SetGlobalEventPool(event.NewEventPool())
-
+func e2eArray(t *testing.T) {
 	rsp := protocol.NewResponse().AppendBulkInterfaces("MEGT", "key1")
 	err := connAndSendMsg(debugAddr, rsp)
 	assert.NoError(t, err)
-	srv.Stop()
 }

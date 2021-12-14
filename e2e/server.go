@@ -1,20 +1,20 @@
 package e2e
 
 import (
-	"context"
 	"testing"
 	"time"
 
+	"github.com/panjf2000/gnet/pkg/pool/goroutine"
 	"github.com/stretchr/testify/assert"
 
-	v1 "github.com/yusank/godis/server/v1"
+	"github.com/yusank/godis/server"
+	v2 "github.com/yusank/godis/server/v2"
 )
 
-func startServer(addr string, t *testing.T) *v1.Server {
-	srv := v1.NewServer()
-
+func startServer(addr string, t *testing.T) server.IServer {
+	srv := v2.NewServer(goroutine.Default())
 	go func() {
-		if err := srv.Start(context.Background(), addr); err != nil {
+		if err := srv.Start(addr); err != nil {
 			assert.NoError(t, err)
 		}
 	}()

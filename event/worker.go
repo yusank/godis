@@ -2,6 +2,7 @@ package event
 
 import (
 	"log"
+	"sync"
 )
 
 type worker struct {
@@ -12,11 +13,13 @@ type worker struct {
 func newWorker(ep *EventPool) *worker {
 	return &worker{
 		ep:   ep,
-		done: make(chan bool),
+		done: make(chan bool, 1),
 	}
 }
 
-func (w *worker) run() {
+func (w *worker) run(wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log.Println("worker start")
 	for {
 		select {

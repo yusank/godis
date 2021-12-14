@@ -5,14 +5,18 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"runtime"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/panjf2000/gnet/pkg/pool/goroutine"
 
 	"github.com/yusank/godis/debug"
 	"github.com/yusank/godis/redis"
 	"github.com/yusank/godis/server"
-	v1 "github.com/yusank/godis/server/v1"
 	v2 "github.com/yusank/godis/server/v2"
 )
 
@@ -35,27 +39,65 @@ func main() {
 		insertPreData()
 	}
 
-	if err := run(addr, server.Version); err != nil {
-		log.Println("exiting: ", err)
+	// srv
+	srv, err := getSrv(server.Version)
+	if err != nil {
+		panic(err)
 	}
+
+	var (
+		wg      = new(sync.WaitGroup)
+		sigChan = make(chan os.Signal, 1)
+		errChan = make(chan error, 1)
+	)
+
+	// signal
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err = srv.Start(addr); err != nil {
+			log.Println("service got err: ", err)
+			errChan <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		select {
+		case <-sigChan:
+			srv.Stop(ctx)
+		case <-errChan:
+			srv.Stop(ctx)
+		}
+	}()
+
+	// wait for service shutdown graceful
+	wg.Wait()
 }
 
 var deferred = make([]func(), 0)
 
-func run(addr string, version string) error {
+func getSrv(version string) (server.IServer, error) {
 	var srv server.IServer
 	switch version {
 	case "v1":
-		srv = v1.NewServer()
+		//srv = v1.NewServer()
+		return nil, errors.New("v1 already deprecated")
 	case "v2":
 		p := goroutine.Default()
 		deferred = append(deferred, p.Release)
 		srv = v2.NewServer(p)
 	default:
-		return errors.New("unknown server version")
+		return nil, errors.New("unknown server version")
 	}
 
-	return srv.Start(context.Background(), addr)
+	return srv, nil
 }
 
 var prepareData = [][]string{

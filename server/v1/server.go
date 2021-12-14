@@ -6,23 +6,24 @@ import (
 	"errors"
 	"log"
 	"net"
-	"os"
-	"os/signal"
+	"strings"
 	"sync"
-	"syscall"
 
 	"github.com/yusank/godis/event"
 	"github.com/yusank/godis/protocol"
 )
 
+// Server provide tcp server based on go native net package
+// Deprecated
 type Server struct {
 	addr     string
 	ctx      context.Context
-	cancel   context.CancelFunc
 	listener net.Listener
 	wg       *sync.WaitGroup
 }
 
+// NewServer return new Server
+// Deprecated
 func NewServer() *Server {
 	return &Server{
 		wg: new(sync.WaitGroup),
@@ -30,20 +31,17 @@ func NewServer() *Server {
 
 }
 
+// Start a new Server
+// Deprecated
 func (s *Server) Start(ctx context.Context, addr string) error {
-	// init
-	// ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	s.ctx, s.cancel = context.WithCancel(ctx)
-
 	// addr
-	s.addr = addr
+	s.addr = strings.TrimPrefix(addr, "tcp://")
 
-	// signal
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	// ctx
+	s.ctx = ctx
+	if ctx == nil {
+		s.ctx = context.Background()
+	}
 
 	// listen
 	l, err := net.Listen("tcp", s.addr)
@@ -54,31 +52,21 @@ func (s *Server) Start(ctx context.Context, addr string) error {
 	log.Println("listen: ", l.Addr())
 	s.listener = l
 
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		select {
-		case <-s.ctx.Done():
-			//s.Stop()
-			log.Println("kill by ctx")
-			return
-		case sig := <-sigChan:
-			s.Stop()
-			log.Printf("kill by signal:%s", sig.String())
-			return
-		}
-	}()
-
+	// wait
 	s.handleListener()
 	return nil
 }
 
-func (s *Server) Stop() {
-	s.cancel()
-	_ = s.listener.Close()
+// Stop the Server
+// Deprecated
+func (s *Server) Stop(_ context.Context) {
+	if s.listener != nil {
+		_ = s.listener.Close()
+	}
 	event.Stop()
 }
 
+// Deprecated
 func (s *Server) handleListener() {
 	for {
 		conn, err := s.listener.Accept()
@@ -101,6 +89,7 @@ func (s *Server) handleListener() {
 }
 
 // handle by a new goroutine
+// Deprecated
 func (s *Server) handleConn(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	ar := protocol.ReceiveDataAsync(reader)

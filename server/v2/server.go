@@ -25,14 +25,15 @@ func NewServer(p *goroutine.Pool) *Server {
 	}
 }
 
-func (s *Server) Start(_ context.Context, addr string) error {
+func (s *Server) Start(addr string) error {
 	s.addr = addr
 	log.Println("listen: ", addr)
 	return gnet.Serve(s, addr, gnet.WithMulticore(true))
 }
 
-func (s *Server) Stop() {
-	if err := gnet.Stop(context.Background(), s.addr); err != nil {
+func (s *Server) Stop(ctx context.Context) {
+	log.Println("graceful shutting down...")
+	if err := gnet.Stop(ctx, s.addr); err != nil {
 		log.Println("stop fail with err:", err)
 	}
 }
