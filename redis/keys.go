@@ -7,6 +7,8 @@ import (
 
 // global commands like `keys`, `exists`
 
+//go:generate gen_redis_cmd "./keys.go"
+
 func keys(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 1 {
 		return nil, ErrCommandArgsNotEnough

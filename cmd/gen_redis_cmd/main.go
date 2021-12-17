@@ -2,31 +2,27 @@ package main
 
 import (
 	"bufio"
-	"flag"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
 )
 
 func main() {
-	var dir string
-	flag.StringVar(&dir, "d", "", "read and parse redis command implement")
-	flag.Parse()
-
-	if dir == "" {
+	var fPath string
+	if len(os.Args) != 2 {
 		panic("must provide dir params")
 	}
+	fPath = os.Args[1]
 
-	kvMap, err := readAndParseFile(dir)
+	log.Println("start generating file: ", fPath)
+	kvs, err := readAndParseFile(fPath)
 	if err != nil {
 		panic(err)
 	}
 
-	if err = writeFiles(kvMap); err != nil {
+	if err = writeFile(fPath, kvs); err != nil {
 		panic(err)
 	}
 }
@@ -40,85 +36,59 @@ const (
 	generatedFileSuffix = ".cmd.go"
 )
 
-func readAndParseFile(fp string) (map[string][]KV, error) {
-	var kvMap = make(map[string][]KV)
-	err := filepath.Walk(fp, func(path string, info fs.FileInfo, err error) error {
-		log.Println(path, info.Name())
-		if info.IsDir() {
-			return nil
-		}
+func readAndParseFile(fp string) ([]KV, error) {
+	var kvs = make([]KV, 0)
+	if !strings.HasSuffix(fp, ".go") {
+		return nil, nil
+	}
 
-		if !strings.HasSuffix(info.Name(), ".go") {
-			return nil
-		}
+	if strings.HasSuffix(fp, generatedFileSuffix) {
+		return nil, nil
+	}
 
-		if strings.HasSuffix(info.Name(), generatedFileSuffix) {
-			return nil
-		}
-
-		f, err1 := os.Open(path)
-		if err1 != nil {
-			return err1
-		}
-		defer noOp(f.Close)
-
-		var (
-			scanner  = bufio.NewScanner(f)
-			lastLine string // for read func comment
-		)
-		for scanner.Scan() {
-
-			fName := regexCmdFuncStr(scanner.Text())
-			if fName != "" {
-				kvs, ok := kvMap[path]
-				if !ok {
-					kvs = make([]KV, 0)
-				}
-
-				kv := KV{
-					CmdName:  strings.ToLower(fName),
-					FuncName: fName,
-				}
-
-				if lastLine != "" {
-					kv.CmdName = strings.ToLower(
-						strings.TrimSpace(
-							strings.TrimPrefix(
-								strings.TrimSuffix(lastLine, "."),
-								"//"),
-						),
-					)
-				}
-
-				kvs = append(kvs, kv)
-				kvMap[path] = kvs
-			}
-
-			lastLine = strings.TrimSpace(scanner.Text())
-		}
-
-		return nil
-	})
-
+	f, err := os.Open(fp)
 	if err != nil {
 		return nil, err
 	}
+	defer noOp(f.Close)
 
-	return kvMap, nil
-}
+	var (
+		scanner  = bufio.NewScanner(f)
+		lastLine string // for read func comment
+	)
 
-func writeFiles(kvMap map[string][]KV) error {
-	for name, kvs := range kvMap {
-		name = strings.Replace(name, ".go", generatedFileSuffix, 1)
-		if err := writeFile(name, kvs); err != nil {
-			return err
+	for scanner.Scan() {
+		fName := regexCmdFuncStr(scanner.Text())
+		if fName != "" {
+			kv := KV{
+				CmdName:  strings.ToLower(fName),
+				FuncName: fName,
+			}
+
+			if lastLine != "" {
+				kv.CmdName = strings.ToLower(
+					strings.TrimSpace(
+						strings.TrimPrefix(
+							strings.TrimSuffix(lastLine, "."),
+							"//"),
+					),
+				)
+			}
+
+			kvs = append(kvs, kv)
+		}
+		lastLine = strings.TrimSpace(scanner.Text())
+
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return kvs, nil
 }
 
 func writeFile(name string, kvs []KV) error {
+	name = strings.Replace(name, ".go", generatedFileSuffix, 1)
 	f, err := os.Create(name)
 	if err != nil {
 		return err
@@ -134,6 +104,7 @@ func writeFile(name string, kvs []KV) error {
 		return err
 	}
 
+	log.Println("write file: ", name)
 	return nil
 }
 
@@ -167,7 +138,7 @@ func regexCmdFuncStr(str string) string {
 		return ""
 	}
 
-	log.Println(res)
+	//log.Println(res)
 	return res[1]
 }
 

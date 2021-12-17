@@ -8,6 +8,8 @@ import (
 	"github.com/yusank/godis/protocol"
 )
 
+//go:generate gen_redis_cmd "./sorted_set.go"
+
 // zAdd .
 func zAdd(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 3 {

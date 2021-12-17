@@ -27,8 +27,8 @@ endif
 	@echo "msg:$(MSG)"
 .PHONEY: gen_cmd
 gen_cmd: ## gen redis cmd code
-	go build -o go_build_gen_redis_cmd cmd/gen_redis_cmd/main.go
-	./go_build_gen_redis_cmd -d ./redis
+	cd cmd/gen_redis_cmd && go install
+	go generate ./...
 .PHONEY: clean
 clean: ## clean all generated code
 	rm -rf redis/*.cmd.go

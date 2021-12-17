@@ -7,6 +7,8 @@ import (
 	"github.com/yusank/godis/protocol"
 )
 
+//go:generate gen_redis_cmd "./set.go"
+
 // sAdd .
 func sAdd(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {

@@ -8,6 +8,8 @@ import (
 	"github.com/yusank/godis/util"
 )
 
+//go:generate gen_redis_cmd "./hash_table.go"
+
 // hDel .
 func hDel(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {

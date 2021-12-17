@@ -8,6 +8,8 @@ import (
 	"github.com/yusank/godis/protocol"
 )
 
+//go:generate gen_redis_cmd "./list.go"
+
 // lPush .
 func lPush(c *Command) (*protocol.Response, error) {
 	if len(c.Values) < 2 {
