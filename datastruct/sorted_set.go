@@ -112,10 +112,8 @@ func zslRandomLevel() int {
 	)
 	/* 随机的同时降低更高的level 的出现,怎么做呢?
 	* Redis源码: (random()&0xFFFF) < (0.25 * 0xFFFF)
-	* 这里的实现如下,原理是,随机一个数,其为偶数的概率 50%,连续两次偶数概率为 25%,以此类推
-	* 连续次数越高概率越低,从而保证 level 更多的分布于低位level
 	 */
-	for rand.Int()%2 == 0 {
+	for rand.Int()&0xFFFF < 0xFFFF/4 {
 		level++
 	}
 
