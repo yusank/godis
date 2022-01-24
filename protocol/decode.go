@@ -16,15 +16,18 @@ import (
 // Receive 代表客户端请求来的数据
 // A client sends the Redis server a RESP Array consisting of just Bulk Strings.
 // 所以不考虑太多特殊情况
-type Receive []string
+type Receive struct {
+	Elements []string
+	OrgStr   string
+}
 
 func (r Receive) String() string {
 	sb := new(strings.Builder)
 
 	_, _ = sb.WriteString("[ ")
-	for i, e := range r {
+	for i, e := range r.Elements {
 		_, _ = sb.WriteString(fmt.Sprintf("%v", e))
-		if i < len(r)-1 {
+		if i < len(r.Elements)-1 {
 			_, _ = sb.WriteString(", ")
 		}
 	}
@@ -33,14 +36,27 @@ func (r Receive) String() string {
 	return sb.String()
 }
 
+func (r *Receive) append(ele, org string) {
+	if r.Elements == nil {
+		r.Elements = make([]string, 0)
+	}
+
+	r.Elements = append(r.Elements, ele)
+	r.OrgStr += org
+}
+
+func (r *Receive) addOrg(s string) {
+	r.OrgStr += s
+}
+
 type AsyncReceive struct {
-	ReceiveChan chan Receive
+	ReceiveChan chan *Receive
 	ErrorChan   chan error
 }
 
 func ReceiveDataAsync(r Reader) *AsyncReceive {
 	var ar = &AsyncReceive{
-		ReceiveChan: make(chan Receive, 1),
+		ReceiveChan: make(chan *Receive, 1),
 		ErrorChan:   make(chan error, 1),
 	}
 	go func() {
@@ -68,51 +84,46 @@ func ReceiveDataAsync(r Reader) *AsyncReceive {
 	return ar
 }
 
-func DecodeFromReader(r Reader) (rec Receive, err error) {
-	rec = make([]string, 0)
+func DecodeFromReader(r Reader) (rec *Receive, err error) {
+	rec = new(Receive)
 	b, err := r.ReadBytes('\n')
 	if err != nil {
 		//log.Println("readBytes err:", err)
 		return nil, err
 	}
 
-	str, length, desc, err := decodeSingleLine(b)
+	length, desc, err := rec.decodeSingleLine(b)
 	if err != nil {
 		log.Println("init message err:", err)
 		return nil, err
 	}
 
 	if desc == DescriptionBulkStrings {
-		temp, err1 := readBulkStrings(r, length)
+		err1 := rec.readBulkStrings(r, length)
 		if err1 != nil {
 			log.Println("read bulk str err:", err1)
 			return nil, err1
 		}
-
-		rec = append(rec, string(temp))
-		return
 	}
 
 	if desc == descriptionArrays {
 		// won't sava array element
-		items, err1 := readArray(r, length)
+		err1 := rec.readArray(r, length)
 		if err1 != nil {
 			log.Println("read bulk str err:", err1)
 			return nil, err1
 		}
-
-		rec = append(rec, items...)
-		return
 	}
 
-	rec = append(rec, str)
 	return
 }
 
-func decodeSingleLine(line []byte) (str string, length int, desc byte, err error) {
+func (r *Receive) decodeSingleLine(line []byte) (length int, desc byte, err error) {
 	if len(line) < 3 {
-		return "", 0, 0, fmt.Errorf("unsupported protocol")
+		return 0, 0, fmt.Errorf("unsupported protocol")
 	}
+
+	r.addOrg(string(line))
 
 	desc = line[0]
 	switch desc {
@@ -120,12 +131,14 @@ func decodeSingleLine(line []byte) (str string, length int, desc byte, err error
 	case DescriptionBulkStrings, descriptionArrays:
 		length = readBulkOrArrayLength(line)
 	case DescriptionSimpleStrings, DescriptionErrors, DescriptionIntegers:
-		str = string(line[1 : len(line)-CRLFLen])
+		r.append(string(line[1:len(line)-CRLFLen]), "")
+		//str = string(line[1 : len(line)-CRLFLen])
 	default:
 		if string(line) == "PING\r\n" {
-			return "PING", 0, DescriptionSimpleStrings, nil
+			r.append("PING", "PING\r\n")
+			return 0, DescriptionSimpleStrings, nil
 		}
-		return "", 0, 0, fmt.Errorf("unsupport protocol: %s", string(line))
+		return 0, 0, fmt.Errorf("unsupport protocol: %s", string(line))
 	}
 
 	return
@@ -146,53 +159,50 @@ func readBulkOrArrayLength(line []byte) int {
 	return ln
 }
 
-func readBulkStrings(r Reader, ln int) (val []byte, err error) {
+func (r *Receive) readBulkStrings(rr Reader, ln int) error {
 	if ln < 0 {
-		return
+		return fmt.Errorf("invalid length")
 	}
 
-	val = make([]byte, ln+2)
-	_, err = r.Read(val)
+	val := make([]byte, ln+2)
+	_, err := rr.Read(val)
+	if err != nil {
+		return err
+	}
 
 	// trim last \r\n
-	val = val[:ln]
-	return
+	r.append(string(val[:ln]), string(val))
+
+	return nil
 }
 
-func readArray(r Reader, ln int) ([]string, error) {
-	var items []string
+func (r *Receive) readArray(rr Reader, ln int) error {
 	for i := 0; i < ln; i++ {
-		line, err := r.ReadBytes('\n')
+		line, err := rr.ReadBytes('\n')
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if line[0] == descriptionArrays {
-			sub, subErr := readArray(r, readBulkOrArrayLength(line))
+			subErr := r.readArray(rr, readBulkOrArrayLength(line))
 			if subErr != nil {
-				return nil, subErr
+				return subErr
 			}
-
-			items = append(items, sub...)
 		}
 
-		str, length, desc, err := decodeSingleLine(line)
+		length, desc, err := r.decodeSingleLine(line)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if desc == DescriptionBulkStrings {
-			temp, err1 := readBulkStrings(r, length)
-			if err1 != nil {
-				log.Println("read bulk str err:", err1)
-				return nil, err1
+			err = r.readBulkStrings(rr, length)
+			if err != nil {
+				log.Println("read bulk str err:", err)
+				return err
 			}
-
-			str = string(temp)
 		}
-
-		items = append(items, str)
 	}
 
-	return items, nil
+	return nil
 }

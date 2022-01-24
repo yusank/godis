@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	DefaultTimeout time.Duration `yaml:"default_timeout"`
+	Persistence    string        `yaml:"persistence"`
 }
 
 func InitConfig(r io.Reader) error {

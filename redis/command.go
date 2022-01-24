@@ -19,14 +19,14 @@ type ExecuteFunc func(*Command) (*protocol.Response, error)
 
 var implementedCommands = map[string]ExecuteFunc{}
 
-func NewCommandFromReceive(ctx context.Context, rec protocol.Receive) *Command {
-	if len(rec) == 0 {
+func NewCommandFromReceive(ctx context.Context, rec *protocol.Receive) *Command {
+	if len(rec.Elements) == 0 {
 		return nil
 	}
 
 	c := &Command{
-		Command: strings.ToLower(rec[0]),
-		Values:  rec[1:],
+		Command: strings.ToLower(rec.Elements[0]),
+		Values:  rec.Elements[1:],
 	}
 
 	return c

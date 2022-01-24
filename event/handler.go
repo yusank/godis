@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/yusank/godis/debug"
+	"github.com/yusank/godis/persistence"
 	"github.com/yusank/godis/protocol"
 	"github.com/yusank/godis/redis"
 )
 
 // HandleRequest receive protocol.Receive as params and return response
-func HandleRequest(rec protocol.Receive) []byte {
+func HandleRequest(rec *protocol.Receive) []byte {
 	// io data to protocol msg
 	if debug.DEBUG {
 		log.Println(rec)
@@ -20,6 +21,9 @@ func HandleRequest(rec protocol.Receive) []byte {
 	// set timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
+
+	// todo: check if open persistence
+	persistence.AOF.WriteCommand(rec)
 
 	// prepare cmd
 	cmd := redis.NewCommandFromReceive(ctx, rec)
